@@ -1,0 +1,94 @@
+.register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5; /* 浅灰色背景 */
+}
+
+.register-form {
+  background-color: #fff;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 350px;
+  text-align: center;
+}
+
+.register-form h2 {
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.input-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+.input-group input[type='text'],
+.input-group input[type='email'],
+.input-group input[type='password'] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  outline: none;
+}
+
+.input-group input[type='text']:focus,
+.input-group input[type='email']:focus,
+.input-group input[type='password']:focus {
+  border-color: #007bff; /* 蓝色高亮 */
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.register-button {
+  background-color: #28a745; /* 绿色注册按钮 */
+  color: #fff;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  width: 100%;
+  transition: background-color 0.3s ease;
+}
+
+.register-button:hover {
+  background-color: #1e7e34;
+}
+
+.error-message {
+  color: #dc3545; /* 红色错误消息 */
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.success-message {
+  color: #28a745; /* 绿色成功消息 */
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.register-footer {
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.register-footer a {
+  color: #007bff;
+  text-decoration: none;
+  margin: 0 10px;
+}
+
+.register-footer a:hover {
+  text-decoration: underline;
+}

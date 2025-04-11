@@ -1,0 +1,97 @@
+.article-list {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.article-list h2 {
+  margin-bottom: 20px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.article-card {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.article-card h3 {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.article-card h3 a {
+  text-decoration: none;
+  color: #333;
+}
+
+.article-card h3 a:hover {
+  color: #007bff;
+}
+
+.article-meta {
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 10px;
+}
+
+.article-meta span {
+  margin-right: 10px;
+}
+
+.article-summary {
+  line-height: 1.6;
+  color: #555;
+}
+
+.article-actions {
+  margin-top: 10px;
+}
+
+.article-actions a {
+  display: inline-block;
+  padding: 8px 15px;
+  background-color: #007bff;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.article-actions a:hover {
+  background-color: #0056b3;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.pagination ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+}
+
+.pagination li {
+  margin: 0 5px;
+}
+
+.pagination button {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background-color: white;
+  cursor: pointer;
+}
+
+.pagination button:hover,
+.pagination li.active button {
+  background-color: #f0f0f0;
+}
+
+.pagination li.active button {
+  font-weight: bold;
+}
