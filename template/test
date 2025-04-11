@@ -1,0 +1,72 @@
+// FileStorage.sol
+pragma solidity ^0.8.0;
+
+contract FileStorage {
+    struct FileInfo {
+        string user;
+        string filename;
+        string ipfsHash;
+        string description;
+        uint256 timestamp;
+    }
+
+    FileInfo[] public files;
+
+    event FileStored(
+        uint256 indexed id,
+        string user,
+        string filename,
+        string ipfsHash,
+        string description,
+        uint256 timestamp
+    );
+
+    function storeFile(
+        string memory _user,
+        string memory _filename,
+        string memory _ipfsHash,
+        string memory _description
+    ) public returns (uint256) {
+        uint256 id = files.length;
+        files.push(FileInfo({
+            user: _user,
+            filename: _filename,
+            ipfsHash: _ipfsHash,
+            description: _description,
+            timestamp: block.timestamp
+        }));
+
+        emit FileStored(
+            id,
+            _user,
+            _filename,
+            _ipfsHash,
+            _description,
+            block.timestamp
+        );
+
+        return id;
+    }
+
+    function getFileCount() public view returns (uint256) {
+        return files.length;
+    }
+
+    function getFile(uint256 _id) public view returns (
+        string memory,
+        string memory,
+        string memory,
+        string memory,
+        uint256
+    ) {
+        require(_id < files.length, "Invalid file ID");
+        FileInfo memory file = files[_id];
+        return (
+            file.user,
+            file.filename,
+            file.ipfsHash,
+            file.description,
+            file.timestamp
+        );
+    }
+}
