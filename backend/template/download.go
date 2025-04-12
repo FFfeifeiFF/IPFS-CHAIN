@@ -2,17 +2,24 @@ package template
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gin-gonic/gin"
 	shell "github.com/ipfs/go-ipfs-api"
 	"io"
 	"io/ioutil"
+	"log"
+	"math/big"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Transaction 结构体（Ganache 返回的交易数据）
@@ -78,9 +85,77 @@ func mustNewType(t string) abi.Type {
 	}
 	return ty
 }
+
+// 区块链记录和数据库存储,积分变化的部分
+func recordTransactionToBlockchainAndDB(
+	c *gin.Context,
+	db *sql.DB,
+	username string,
+	operation string, // "download"或"upload"
+	pointsChange int64,
+) error {
+	// 1. 连接Ganache
+	client, err := ethclient.Dial(ibcGanacheURL)
+	if err != nil {
+		return fmt.Errorf("连接区块链失败: %v", err)
+	}
+
+	// 2. 加载合约
+	contractAddress := common.HexToAddress(ibcContractAddress) // 替换为实际部署地址
+	contract, err := NewMain(contractAddress, client)
+	if err != nil {
+		return fmt.Errorf("加载合约失败: %v", err)
+	}
+
+	privateKey, err := crypto.HexToECDSA(ibcPrivateKey)
+
+	// 4. 准备交易
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(1337))
+	if err != nil {
+		return fmt.Errorf("创建交易签名者失败: %v", err)
+	}
+	auth.Value = big.NewInt(0) // 不发送ETH
+	auth.GasLimit = uint64(300000)
+
+	// 5. 发送交易到区块链
+	tx, err := contract.RecordTransaction(auth, operation, big.NewInt(pointsChange))
+	if err != nil {
+		return fmt.Errorf("区块链交易失败: %v", err)
+	}
+
+	// 6. 等待交易确认
+	receipt, err := bind.WaitMined(context.Background(), client, tx)
+	if err != nil {
+		return fmt.Errorf("等待交易确认失败: %v", err)
+	}
+	fmt.Println(receipt)
+	fmt.Println(big.NewInt(pointsChange))
+	// 7. 将交易记录存入数据库
+	_, err = db.Exec(`
+    INSERT INTO blockchain_transactions (
+        tx_hash, 
+        user_id, 
+        timestamp
+    ) VALUES (?, 
+        (SELECT id FROM user WHERE username = ?), 
+        ?)`,
+		tx.Hash().Hex(),
+		username,
+		time.Now().Unix(),
+	)
+	if err != nil {
+		return fmt.Errorf("保存交易记录失败: %v", err)
+	}
+
+	return nil
+}
+
 func DownloadFile(c *gin.Context) {
 	id := c.DefaultQuery("id", "0")
-	fmt.Println(id)
+	username := c.DefaultQuery("username", "")
+	isCheck := c.DefaultQuery("check", "false") == "true" // 检查模式标志
+	fmt.Println(isCheck)
+	//fmt.Println(username)
 	//连接数据库
 	dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
 	db, err := sql.Open("mysql", dsn)
@@ -89,14 +164,18 @@ func DownloadFile(c *gin.Context) {
 		return
 	}
 	defer db.Close()
+
 	// 查询当前页的文章的TX值
 	query := `
-    SELECT m.hash
+    SELECT m.hash,m.points
     FROM message m
     WHERE m.message_id = ?  
 `
 	var hash string
-	err = db.QueryRow(query, id).Scan(&hash) // yourID 是你要查询的ID参数
+	var articlePoints int
+	err = db.QueryRow(query, id).Scan(&hash, &articlePoints) // yourID 是你要查询的ID参数
+	//fmt.Println(hash)
+	//fmt.Println(points)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			fmt.Println("没有找到对应的记录")
@@ -106,6 +185,78 @@ func DownloadFile(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库查询失败"})
 		}
 		return
+	}
+
+	// 2. 查询用户积分
+	var userPoints int
+	err = db.QueryRow(`
+        SELECT points 
+        FROM user 
+        WHERE username = ?`, username).Scan(&userPoints)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询用户积分失败"})
+		}
+		return
+	}
+
+	// 3. 检查积分是否足够
+	if userPoints < articlePoints {
+		c.JSON(http.StatusPaymentRequired, gin.H{
+			"error":           "积分不足",
+			"required_points": articlePoints,
+			"current_points":  userPoints,
+		})
+		return
+	}
+
+	// 如果是检查模式，只返回可下载信息
+	if isCheck {
+		c.JSON(http.StatusOK, gin.H{
+			"can_download":    true,
+			"required_points": articlePoints,
+			"current_points":  userPoints,
+		})
+		return
+	}
+
+	// 4. 正式下载流程（扣除积分）
+	tx1, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "事务启动失败"})
+		return
+	}
+	defer tx1.Rollback()
+
+	// 扣除积分
+	_, err = tx1.Exec(`
+        UPDATE user 
+        SET points = points - ? 
+        WHERE username = ?`, articlePoints, username)
+	fmt.Println(username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "扣除积分失败"})
+		return
+	}
+	if err = tx1.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "事务提交失败"})
+		return
+	}
+
+	//扣除积分事件写入IBC链中，并将交易哈希，交易时间，交易用户存入数据中
+	// 写入区块链和数据库
+	err = recordTransactionToBlockchainAndDB(
+		c,
+		db,
+		username,
+		"download",
+		-int64(articlePoints), // 负数表示扣除
+	)
+	if err != nil {
+		log.Printf("警告: 区块链记录失败但积分已扣除: %v", err)
+		// 可以根据业务决定是否回滚积分扣除
 	}
 
 	// 2. 通过 Ganache RPC 获取交易详情

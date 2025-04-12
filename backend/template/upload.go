@@ -40,7 +40,7 @@ const (
 	//IBC
 	ibcGanacheURL      = "http://localhost:7546" // 假设IBC使用不同端口
 	ibcPrivateKey      = "7acc49c100e782cd7f2ed18174cb131d94d42182a6d5751c85710520b8899931"
-	ibcContractAddress = "0x...IBC合约地址"
+	ibcContractAddress = "0x5a9091eC71B48d5974F56A5A80b3C751573Ac3A1"
 )
 
 // 上传文件
@@ -196,7 +196,3 @@ func storeOnBlockchain(user, filename, ipfsHash, description string) (string, er
 	// 返回交易哈希
 	return tx.Hash().Hex(), nil
 }
-
-//积分增减
-
-//

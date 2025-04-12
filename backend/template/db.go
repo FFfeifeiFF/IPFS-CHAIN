@@ -16,6 +16,7 @@ type UploadRequest struct {
 	IPFSHash    string    `json:"ipfsHash"`
 	Description string    `json:"description"`
 	TxHash      string    `json:"txHash"`
+	Points      int       `json:"points"`
 }
 
 func Db(c *gin.Context) {
@@ -41,7 +42,8 @@ func Db(c *gin.Context) {
 		return
 	}
 	fmt.Println("Successfully connected to MySQL!")
-	_, err = db.Exec("INSERT INTO message (user_id, message_name, date,hash,summary) VALUES (?,?,?, ?, ?)", req.Username, req.Filename, req.UploadDate, req.TxHash, req.Description)
+	fmt.Println(req)
+	_, err = db.Exec("INSERT INTO message (user_id, message_name, date,hash,summary,points) VALUES (?,?,?, ?, ?,?)", req.Username, req.Filename, req.UploadDate, req.TxHash, req.Description, req.Points)
 	if err != nil {
 		fmt.Println("数据库写入错误:", err)
 		c.JSON(http.StatusInternalServerError, RegisterResponse{Success: false, Error: "注册失败，数据库写入错误"})

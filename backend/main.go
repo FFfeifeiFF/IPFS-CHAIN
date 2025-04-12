@@ -4,7 +4,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	template2 "gotest/backend/template"
+	"gotest/template"
 	"net/http"
 	"time"
 )
@@ -31,13 +31,13 @@ func main() {
 	})
 
 	// 定义 /register 路由和处理函数 (使用 Gin 的方式)
-	r.POST("/register", template2.RegisterHandler)
-	r.POST("/login", template2.LoginHandler)
-	r.GET("/articles", template2.GetArticlesHandler)
-	r.GET("/search", template2.GetSearchsHandler)
-	r.POST("/upload", template2.UploadFile) //上传文件到IPFS中
-	r.POST("/db", template2.Db)
-	r.POST("/download", template2.DownloadFile)
+	r.POST("/register", template.RegisterHandler)
+	r.POST("/login", template.LoginHandler)
+	r.GET("/articles", template.GetArticlesHandler)
+	r.GET("/search", template.GetSearchsHandler)
+	r.POST("/upload", template.UploadFile) //上传文件到IPFS中
+	r.POST("/db", template.Db)
+	r.POST("/download", template.DownloadFile)
 	// 启动 HTTP 服务，监听 8080 端口
 	r.Run(":8080")
 }

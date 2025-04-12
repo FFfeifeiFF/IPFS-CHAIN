@@ -55,7 +55,7 @@ func GetArticlesHandler(c *gin.Context) {
 
 	// 查询当前页的文章并连接用户表获取用户名
 	query := `
-		SELECT m.message_id, m.message_name, u.username, m.date, m.summary
+		SELECT m.message_id, m.message_name, u.username, m.date, m.summary,m.points
 		FROM message m
 		INNER JOIN user u ON m.user_id = u.id
 		LIMIT ? OFFSET ?
@@ -71,7 +71,8 @@ func GetArticlesHandler(c *gin.Context) {
 	var articles []Article
 	for rows.Next() {
 		var article Article
-		err := rows.Scan(&article.ID, &article.Title, &article.Author, &article.Date, &article.Summary)
+		fmt.Println(article)
+		err := rows.Scan(&article.ID, &article.Title, &article.Author, &article.Date, &article.Summary, &article.Points)
 		if err != nil {
 			fmt.Println("数据扫描失败:", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "数据扫描失败"})
