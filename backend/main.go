@@ -38,6 +38,9 @@ func main() {
 	r.POST("/upload", template.UploadFile) //上传文件到IPFS中
 	r.POST("/db", template.Db)
 	r.POST("/download", template.DownloadFile)
+	r.GET("/fileupdate", template.FileUpdate)
+	r.DELETE("/fileupdate/:articleId", template.DeleteArticleHandler)
+	r.PUT("/fileupdate/:articleId", template.UpdateArticleHandler)
 	// 启动 HTTP 服务，监听 8080 端口
 	r.Run(":8080")
 }

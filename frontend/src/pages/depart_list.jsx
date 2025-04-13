@@ -15,7 +15,7 @@ function Departlist() {
         <div className="container">
             <Head username={username}/>
             <div className="content-area">
-             <ArticleList/>
+             <ArticleList username={username}/>
                  <Sidebar2 username={username} />
             </div>
             <Footer/>

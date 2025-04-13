@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './css/ArticleList.css';
 
-function ArticleList() {
+function ArticleList({ username }) {
   const [articles, setArticles] = useState(null); // 初始化为 null
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,7 +16,7 @@ function ArticleList() {
 
       try {
         const response = await fetch(
-          `http://localhost:8080/articles?page=${currentPage}&pageSize=${articlesPerPage}`
+          `http://localhost:8080/articles?page=${currentPage}&pageSize=${articlesPerPage}&username=${encodeURIComponent(username)}`
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -38,16 +38,42 @@ function ArticleList() {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
    // --- 新增：处理下载点击的函数 ---
-  const handleDownloadClick = async (articleId, suggestedFilename) => {
+  const handleDownloadClick = async (articleId,suggestedFilename,articlePoints) => {
     if (downloadingId === articleId) return; // 如果当前文件已在下载，则不执行任何操作
     setDownloadingId(articleId); // 设置当前正在下载的文章 ID
-    console.log(`请求下载文章 ID: ${articleId}`);
-
+    //console.log(`请求下载文章 ID: ${articleId}`);
+    //console.log(`请求下载文章points:${articlePoints}`)
     try {
-      const downloadApiUrl = `http://localhost:8080/download?id=${articleId}`; // 假设这是你的下载后端地址
+
+    // 第一步：检查积分
+    const checkResponse = await fetch(
+      `http://localhost:8080/download?id=${articleId}&username=${encodeURIComponent(username)}&check=true`,
+        {
+          method:"POST"
+        }
+    );
+    const checkData = await checkResponse.json();
+
+    if (!checkResponse.ok) {
+      throw new Error(checkData.error || '检查下载权限失败');
+    }
+
+    // 显示确认对话框
+    const confirmed = window.confirm(
+      `下载将消耗 ${articlePoints} 积分（当前剩余：${checkData.current_points}），确认下载吗？`
+    );
+
+    if (!confirmed) {
+      setDownloadingId(null);
+      return;
+    }
+
+    //第二步
+      const downloadApiUrl = `http://localhost:8080/download?id=${articleId}&username=${encodeURIComponent(username)}&check=false`; // 假设这是你的下载后端地址
 
       const response = await fetch(downloadApiUrl, {
         method: 'POST', // 或 POST，取决于你的下载接口设
+
       });
 
       if (!response.ok) {
@@ -119,7 +145,7 @@ function ArticleList() {
             <button
                 // 假设你的 article 对象中有 filename 属性
                 // 如果没有，你可能需要从其他地方获取或硬编码一个，或者让后端决定
-                onClick={() => handleDownloadClick(article.id, article.filename || `${article.title}.ext`)}
+                onClick={() => handleDownloadClick(article.id, article.filename || `${article.title}.ext`,article.points)}
                 disabled={downloadingId === article.id} // 当这个文件正在下载时禁用按钮
             >
               {downloadingId === article.id ? '下载中...' : '下载文件'}

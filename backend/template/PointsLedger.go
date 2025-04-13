@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"strings"
 
+
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -29,113 +30,113 @@ var (
 	_ = abi.ConvertType
 )
 
-// MainMetaData contains all meta data concerning the Main contract.
-var MainMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"operation\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"int256\",\"name\":\"pointsChange\",\"type\":\"int256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"PointsTransaction\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_operation\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"_pointsChange\",\"type\":\"int256\"}],\"name\":\"recordTransaction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+// ContractMetaData contains all meta data concerning the Contract contract.
+var ContractMetaData = &bind.MetaData{
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"string\",\"name\":\"username\",\"type\":\"string\"},{\"indexed\":true,\"internalType\":\"string\",\"name\":\"operation\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"int256\",\"name\":\"pointsChange\",\"type\":\"int256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"PointsTransaction\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_username\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"_operation\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"_pointsChange\",\"type\":\"int256\"}],\"name\":\"recordTransaction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
-// MainABI is the input ABI used to generate the binding from.
-// Deprecated: Use MainMetaData.ABI instead.
-var MainABI = MainMetaData.ABI
+// ContractABI is the input ABI used to generate the binding from.
+// Deprecated: Use ContractMetaData.ABI instead.
+var ContractABI = ContractMetaData.ABI
 
-// Main is an auto generated Go binding around an Ethereum contract.
-type Main struct {
-	MainCaller     // Read-only binding to the contract
-	MainTransactor // Write-only binding to the contract
-	MainFilterer   // Log filterer for contract events
+// Contract is an auto generated Go binding around an Ethereum contract.
+type Contract struct {
+	ContractCaller     // Read-only binding to the contract
+	ContractTransactor // Write-only binding to the contract
+	ContractFilterer   // Log filterer for contract events
 }
 
-// MainCaller is an auto generated read-only Go binding around an Ethereum contract.
-type MainCaller struct {
+// ContractCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ContractCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MainTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type MainTransactor struct {
+// ContractTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ContractTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MainFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type MainFilterer struct {
+// ContractFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ContractFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// MainSession is an auto generated Go binding around an Ethereum contract,
+// ContractSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type MainSession struct {
-	Contract     *Main             // Generic contract binding to set the session for
+type ContractSession struct {
+	Contract     *Contract         // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// MainCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// ContractCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type MainCallerSession struct {
-	Contract *MainCaller   // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts // Call options to use throughout this session
+type ContractCallerSession struct {
+	Contract *ContractCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
-// MainTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// ContractTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type MainTransactorSession struct {
-	Contract     *MainTransactor   // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+type ContractTransactorSession struct {
+	Contract     *ContractTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
-// MainRaw is an auto generated low-level Go binding around an Ethereum contract.
-type MainRaw struct {
-	Contract *Main // Generic contract binding to access the raw methods on
+// ContractRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ContractRaw struct {
+	Contract *Contract // Generic contract binding to access the raw methods on
 }
 
-// MainCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type MainCallerRaw struct {
-	Contract *MainCaller // Generic read-only contract binding to access the raw methods on
+// ContractCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ContractCallerRaw struct {
+	Contract *ContractCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// MainTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type MainTransactorRaw struct {
-	Contract *MainTransactor // Generic write-only contract binding to access the raw methods on
+// ContractTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ContractTransactorRaw struct {
+	Contract *ContractTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewMain creates a new instance of Main, bound to a specific deployed contract.
-func NewMain(address common.Address, backend bind.ContractBackend) (*Main, error) {
-	contract, err := bindMain(address, backend, backend, backend)
+// NewContract creates a new instance of Contract, bound to a specific deployed contract.
+func NewContract(address common.Address, backend bind.ContractBackend) (*Contract, error) {
+	contract, err := bindContract(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &Main{MainCaller: MainCaller{contract: contract}, MainTransactor: MainTransactor{contract: contract}, MainFilterer: MainFilterer{contract: contract}}, nil
+	return &Contract{ContractCaller: ContractCaller{contract: contract}, ContractTransactor: ContractTransactor{contract: contract}, ContractFilterer: ContractFilterer{contract: contract}}, nil
 }
 
-// NewMainCaller creates a new read-only instance of Main, bound to a specific deployed contract.
-func NewMainCaller(address common.Address, caller bind.ContractCaller) (*MainCaller, error) {
-	contract, err := bindMain(address, caller, nil, nil)
+// NewContractCaller creates a new read-only instance of Contract, bound to a specific deployed contract.
+func NewContractCaller(address common.Address, caller bind.ContractCaller) (*ContractCaller, error) {
+	contract, err := bindContract(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &MainCaller{contract: contract}, nil
+	return &ContractCaller{contract: contract}, nil
 }
 
-// NewMainTransactor creates a new write-only instance of Main, bound to a specific deployed contract.
-func NewMainTransactor(address common.Address, transactor bind.ContractTransactor) (*MainTransactor, error) {
-	contract, err := bindMain(address, nil, transactor, nil)
+// NewContractTransactor creates a new write-only instance of Contract, bound to a specific deployed contract.
+func NewContractTransactor(address common.Address, transactor bind.ContractTransactor) (*ContractTransactor, error) {
+	contract, err := bindContract(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &MainTransactor{contract: contract}, nil
+	return &ContractTransactor{contract: contract}, nil
 }
 
-// NewMainFilterer creates a new log filterer instance of Main, bound to a specific deployed contract.
-func NewMainFilterer(address common.Address, filterer bind.ContractFilterer) (*MainFilterer, error) {
-	contract, err := bindMain(address, nil, nil, filterer)
+// NewContractFilterer creates a new log filterer instance of Contract, bound to a specific deployed contract.
+func NewContractFilterer(address common.Address, filterer bind.ContractFilterer) (*ContractFilterer, error) {
+	contract, err := bindContract(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &MainFilterer{contract: contract}, nil
+	return &ContractFilterer{contract: contract}, nil
 }
 
-// bindMain binds a generic wrapper to an already deployed contract.
-func bindMain(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := MainMetaData.GetAbi()
+// bindContract binds a generic wrapper to an already deployed contract.
+func bindContract(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := ContractMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -146,64 +147,64 @@ func bindMain(address common.Address, caller bind.ContractCaller, transactor bin
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Main *MainRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _Main.Contract.MainCaller.contract.Call(opts, result, method, params...)
+func (_Contract *ContractRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Contract.Contract.ContractCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_Main *MainRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Main.Contract.MainTransactor.contract.Transfer(opts)
+func (_Contract *ContractRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Contract.Contract.ContractTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_Main *MainRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Main.Contract.MainTransactor.contract.Transact(opts, method, params...)
+func (_Contract *ContractRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Contract.Contract.ContractTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_Main *MainCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _Main.Contract.contract.Call(opts, result, method, params...)
+func (_Contract *ContractCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Contract.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_Main *MainTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Main.Contract.contract.Transfer(opts)
+func (_Contract *ContractTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Contract.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_Main *MainTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _Main.Contract.contract.Transact(opts, method, params...)
+func (_Contract *ContractTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Contract.Contract.contract.Transact(opts, method, params...)
 }
 
-// RecordTransaction is a paid mutator transaction binding the contract method 0x050e357c.
+// RecordTransaction is a paid mutator transaction binding the contract method 0x68e381dd.
 //
-// Solidity: function recordTransaction(string _operation, int256 _pointsChange) returns()
-func (_Main *MainTransactor) RecordTransaction(opts *bind.TransactOpts, _operation string, _pointsChange *big.Int) (*types.Transaction, error) {
-	return _Main.contract.Transact(opts, "recordTransaction", _operation, _pointsChange)
+// Solidity: function recordTransaction(string _username, string _operation, int256 _pointsChange) returns()
+func (_Contract *ContractTransactor) RecordTransaction(opts *bind.TransactOpts, _username string, _operation string, _pointsChange *big.Int) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "recordTransaction", _username, _operation, _pointsChange)
 }
 
-// RecordTransaction is a paid mutator transaction binding the contract method 0x050e357c.
+// RecordTransaction is a paid mutator transaction binding the contract method 0x68e381dd.
 //
-// Solidity: function recordTransaction(string _operation, int256 _pointsChange) returns()
-func (_Main *MainSession) RecordTransaction(_operation string, _pointsChange *big.Int) (*types.Transaction, error) {
-	return _Main.Contract.RecordTransaction(&_Main.TransactOpts, _operation, _pointsChange)
+// Solidity: function recordTransaction(string _username, string _operation, int256 _pointsChange) returns()
+func (_Contract *ContractSession) RecordTransaction(_username string, _operation string, _pointsChange *big.Int) (*types.Transaction, error) {
+	return _Contract.Contract.RecordTransaction(&_Contract.TransactOpts, _username, _operation, _pointsChange)
 }
 
-// RecordTransaction is a paid mutator transaction binding the contract method 0x050e357c.
+// RecordTransaction is a paid mutator transaction binding the contract method 0x68e381dd.
 //
-// Solidity: function recordTransaction(string _operation, int256 _pointsChange) returns()
-func (_Main *MainTransactorSession) RecordTransaction(_operation string, _pointsChange *big.Int) (*types.Transaction, error) {
-	return _Main.Contract.RecordTransaction(&_Main.TransactOpts, _operation, _pointsChange)
+// Solidity: function recordTransaction(string _username, string _operation, int256 _pointsChange) returns()
+func (_Contract *ContractTransactorSession) RecordTransaction(_username string, _operation string, _pointsChange *big.Int) (*types.Transaction, error) {
+	return _Contract.Contract.RecordTransaction(&_Contract.TransactOpts, _username, _operation, _pointsChange)
 }
 
-// MainPointsTransactionIterator is returned from FilterPointsTransaction and is used to iterate over the raw logs and unpacked data for PointsTransaction events raised by the Main contract.
-type MainPointsTransactionIterator struct {
-	Event *MainPointsTransaction // Event containing the contract specifics and raw log
+// ContractPointsTransactionIterator is returned from FilterPointsTransaction and is used to iterate over the raw logs and unpacked data for PointsTransaction events raised by the Contract contract.
+type ContractPointsTransactionIterator struct {
+	Event *ContractPointsTransaction // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -217,7 +218,7 @@ type MainPointsTransactionIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *MainPointsTransactionIterator) Next() bool {
+func (it *ContractPointsTransactionIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -226,7 +227,7 @@ func (it *MainPointsTransactionIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(MainPointsTransaction)
+			it.Event = new(ContractPointsTransaction)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -241,7 +242,7 @@ func (it *MainPointsTransactionIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(MainPointsTransaction)
+		it.Event = new(ContractPointsTransaction)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -257,54 +258,71 @@ func (it *MainPointsTransactionIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *MainPointsTransactionIterator) Error() error {
+func (it *ContractPointsTransactionIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *MainPointsTransactionIterator) Close() error {
+func (it *ContractPointsTransactionIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// MainPointsTransaction represents a PointsTransaction event raised by the Main contract.
-type MainPointsTransaction struct {
-	User         common.Address
-	Operation    string
+// ContractPointsTransaction represents a PointsTransaction event raised by the Contract contract.
+type ContractPointsTransaction struct {
+	Sender       common.Address
+	Username     common.Hash
+	Operation    common.Hash
 	PointsChange *big.Int
 	Timestamp    *big.Int
 	Raw          types.Log // Blockchain specific contextual infos
 }
 
-// FilterPointsTransaction is a free log retrieval operation binding the contract event 0x3d919d361bf8cacf5f81a8cb13475f100a025554c005b649ed0f9ea7ab447215.
+// FilterPointsTransaction is a free log retrieval operation binding the contract event 0x7f19fa61709155463efc1ee09e31b0858747f582a4741b9ec5452e288c1086e6.
 //
-// Solidity: event PointsTransaction(address indexed user, string operation, int256 pointsChange, uint256 timestamp)
-func (_Main *MainFilterer) FilterPointsTransaction(opts *bind.FilterOpts, user []common.Address) (*MainPointsTransactionIterator, error) {
+// Solidity: event PointsTransaction(address indexed sender, string indexed username, string indexed operation, int256 pointsChange, uint256 timestamp)
+func (_Contract *ContractFilterer) FilterPointsTransaction(opts *bind.FilterOpts, sender []common.Address, username []string, operation []string) (*ContractPointsTransactionIterator, error) {
 
-	var userRule []interface{}
-	for _, userItem := range user {
-		userRule = append(userRule, userItem)
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+	var usernameRule []interface{}
+	for _, usernameItem := range username {
+		usernameRule = append(usernameRule, usernameItem)
+	}
+	var operationRule []interface{}
+	for _, operationItem := range operation {
+		operationRule = append(operationRule, operationItem)
 	}
 
-	logs, sub, err := _Main.contract.FilterLogs(opts, "PointsTransaction", userRule)
+	logs, sub, err := _Contract.contract.FilterLogs(opts, "PointsTransaction", senderRule, usernameRule, operationRule)
 	if err != nil {
 		return nil, err
 	}
-	return &MainPointsTransactionIterator{contract: _Main.contract, event: "PointsTransaction", logs: logs, sub: sub}, nil
+	return &ContractPointsTransactionIterator{contract: _Contract.contract, event: "PointsTransaction", logs: logs, sub: sub}, nil
 }
 
-// WatchPointsTransaction is a free log subscription operation binding the contract event 0x3d919d361bf8cacf5f81a8cb13475f100a025554c005b649ed0f9ea7ab447215.
+// WatchPointsTransaction is a free log subscription operation binding the contract event 0x7f19fa61709155463efc1ee09e31b0858747f582a4741b9ec5452e288c1086e6.
 //
-// Solidity: event PointsTransaction(address indexed user, string operation, int256 pointsChange, uint256 timestamp)
-func (_Main *MainFilterer) WatchPointsTransaction(opts *bind.WatchOpts, sink chan<- *MainPointsTransaction, user []common.Address) (event.Subscription, error) {
+// Solidity: event PointsTransaction(address indexed sender, string indexed username, string indexed operation, int256 pointsChange, uint256 timestamp)
+func (_Contract *ContractFilterer) WatchPointsTransaction(opts *bind.WatchOpts, sink chan<- *ContractPointsTransaction, sender []common.Address, username []string, operation []string) (event.Subscription, error) {
 
-	var userRule []interface{}
-	for _, userItem := range user {
-		userRule = append(userRule, userItem)
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+	var usernameRule []interface{}
+	for _, usernameItem := range username {
+		usernameRule = append(usernameRule, usernameItem)
+	}
+	var operationRule []interface{}
+	for _, operationItem := range operation {
+		operationRule = append(operationRule, operationItem)
 	}
 
-	logs, sub, err := _Main.contract.WatchLogs(opts, "PointsTransaction", userRule)
+	logs, sub, err := _Contract.contract.WatchLogs(opts, "PointsTransaction", senderRule, usernameRule, operationRule)
 	if err != nil {
 		return nil, err
 	}
@@ -314,8 +332,8 @@ func (_Main *MainFilterer) WatchPointsTransaction(opts *bind.WatchOpts, sink cha
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(MainPointsTransaction)
-				if err := _Main.contract.UnpackLog(event, "PointsTransaction", log); err != nil {
+				event := new(ContractPointsTransaction)
+				if err := _Contract.contract.UnpackLog(event, "PointsTransaction", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -336,12 +354,12 @@ func (_Main *MainFilterer) WatchPointsTransaction(opts *bind.WatchOpts, sink cha
 	}), nil
 }
 
-// ParsePointsTransaction is a log parse operation binding the contract event 0x3d919d361bf8cacf5f81a8cb13475f100a025554c005b649ed0f9ea7ab447215.
+// ParsePointsTransaction is a log parse operation binding the contract event 0x7f19fa61709155463efc1ee09e31b0858747f582a4741b9ec5452e288c1086e6.
 //
-// Solidity: event PointsTransaction(address indexed user, string operation, int256 pointsChange, uint256 timestamp)
-func (_Main *MainFilterer) ParsePointsTransaction(log types.Log) (*MainPointsTransaction, error) {
-	event := new(MainPointsTransaction)
-	if err := _Main.contract.UnpackLog(event, "PointsTransaction", log); err != nil {
+// Solidity: event PointsTransaction(address indexed sender, string indexed username, string indexed operation, int256 pointsChange, uint256 timestamp)
+func (_Contract *ContractFilterer) ParsePointsTransaction(log types.Log) (*ContractPointsTransaction, error) {
+	event := new(ContractPointsTransaction)
+	if err := _Contract.contract.UnpackLog(event, "PointsTransaction", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

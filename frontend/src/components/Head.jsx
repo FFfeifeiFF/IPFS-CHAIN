@@ -31,6 +31,9 @@ function Head(props) {
           <Link to={"/fileupload"} state={{username:props.username}}>
           上传
             </Link>
+          <Link to={"/myfile"} state={{username:props.username}}>
+          我的文件
+            </Link>
           {/* 添加更多导航链接 */}
         </div>
       </div>
