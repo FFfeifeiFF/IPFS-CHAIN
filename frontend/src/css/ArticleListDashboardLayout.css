@@ -1,0 +1,356 @@
+/* src/css/ArticleListDashboardLayout.css */
+:root {
+  --primary-color: #4a90e2; /* 主题蓝 */
+  --border-color: #e4e7ed; /* 较浅的边框色 */
+  --card-bg: #ffffff;
+  --sidebar-bg: #f7f8fa; /* 侧边栏背景 */
+  --body-bg: #f0f2f5; /* 页面背景 */
+  --text-color: #303133; /* 主要文字颜色 */
+  --text-secondary: #606266; /* 次要文字 */
+  --text-placeholder: #909399; /* 占位文字 */
+  --link-color: var(--primary-color);
+  --risk-high-color: #f56c6c; /* 红色-高危 */
+  --risk-medium-color: #e6a23c; /* 橙色-中危 */
+  --risk-low-color: #909399; /* 灰色-低危/提示 */
+  --tag-bg: #ecf5ff; /* 标签背景 */
+  --tag-border: #d9ecff;
+  --tag-text: var(--primary-color);
+}
+
+body {
+  background-color: var(--body-bg);
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "\\5FAE软雅黑", Arial, sans-serif;
+  color: var(--text-color);
+  margin: 0;
+  font-size: 14px; /* 基础字号 */
+}
+
+.login-prompt-container {
+    padding: 50px; text-align: center; color: var(--text-placeholder);
+}
+
+.dashboard-layout {
+  display: flex;
+  gap: 20px; /* 列间距 */
+  padding: 20px;
+  max-width: 1600px; /* 页面最大宽度 */
+  margin: 0 auto;
+  align-items: flex-start; /* 顶部对齐 */
+}
+
+/* 主内容区域 */
+.main-content-area {
+  flex: 3; /* 占据 3 份宽度 */
+  min-width: 0; /* 防止 flex item 内容溢出 */
+  background-color: var(--card-bg);
+  border-radius: 6px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.06);
+  padding: 20px;
+}
+
+.main-content-title {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 15px;
+  color: #1f2d3d; /* 标题颜色稍深 */
+}
+
+.article-list-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* 卡片间距 */
+}
+
+/* 状态消息 */
+.status-message {
+    padding: 15px; text-align: center; color: var(--text-placeholder); font-style: italic;
+    border: 1px dashed var(--border-color); border-radius: 4px; background-color: #fafafa;
+}
+.status-message.error {
+    color: var(--risk-high-color); font-style: normal; border-color: #fde2e2; background-color: #fef0f0;
+}
+
+/* 文章卡片 - 新布局样式 */
+.article-card-layout {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: var(--card-bg); /* 背景色 */
+}
+.article-card-layout:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* 左侧图标区域 */
+.card-icon-area {
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+.risk-indicator {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 50%;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+}
+.risk-indicator.high { background-color: var(--risk-high-color); }
+.risk-indicator.medium { background-color: var(--risk-medium-color); }
+.risk-indicator.low { background-color: var(--risk-low-color); }
+.user-level-newbie {
+    color: var(--risk-low-color); /* 使用低危灰色 #909399 */
+}
+
+/* 普通用户等级文字 (蓝色) */
+.user-level-normal {
+    color: var(--primary-color); /* 使用主题蓝 #4a90e2 */
+}
+
+/* 会员用户等级文字 (红色) */
+.user-level-member {
+    color: var(--risk-high-color); /* 使用高危红色 #f56c6c */
+}
+/* 中间内容区域 */
+.card-content-layout {
+  flex-grow: 1;
+  min-width: 0; /* 防止文本溢出 */
+  margin-right: 15px;
+}
+
+.card-title-layout {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap; /* 不换行 */
+  overflow: hidden; /* 隐藏溢出 */
+  text-overflow: ellipsis; /* 显示省略号 */
+}
+.card-title-layout a {
+  color: var(--text-color); text-decoration: none;
+}
+.card-title-layout a:hover {
+  color: var(--link-color); text-decoration: underline;
+}
+
+.card-meta-layout {
+  display: flex;
+  flex-wrap: wrap; /* 允许换行 */
+  gap: 6px 15px; /* 行间距 列间距 */
+  font-size: 13px;
+  color: var(--text-secondary);
+  align-items: center; /* 垂直居中对齐 */
+}
+.meta-item {
+    /* 单个元数据项 */
+    white-space: nowrap; /* 防止内部换行 */
+}
+.meta-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap; /* 标签默认不换行 */
+    overflow: hidden; /* 隐藏多余标签 */
+    max-width: 300px; /* 限制标签区域最大宽度，避免挤压其他元数据 */
+}
+.tag {
+  background-color: var(--tag-bg);
+  border: 1px solid var(--tag-border);
+  color: var(--tag-text);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* 不同类型标签的颜色 */
+.tag-risk-high { background-color: #fef0f0; border-color: #fde2e2; color: var(--risk-high-color); }
+.tag-risk-medium { background-color: #fdf6ec; border-color: #faecd8; color: var(--risk-medium-color); }
+.tag-risk-low { background-color: #f4f4f5; border-color: #e9e9eb; color: var(--risk-low-color); }
+.tag-official { background-color: #fff0e6; border-color: #ffe5d1; color: #f56a00; }
+.tag-latest { background-color: #e6f7f1; border-color: #c6f0df; color: #00875a; }
+.tag-product { background-color: #e8f4fd; border-color: #d1e9ff; color: #1d7afc; }
+
+/* 右侧操作按钮区域 */
+.card-actions-layout {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.action-button {
+  background: none; border: none; padding: 4px; cursor: pointer;
+  color: var(--text-placeholder); border-radius: 4px;
+  transition: color 0.2s, background-color 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; /* 按钮大小 */
+}
+.action-button:hover:not(:disabled) {
+  background-color: #ecf5ff; color: var(--primary-color);
+}
+.action-button:disabled { cursor: not-allowed; opacity: 0.5; }
+.action-button.loading { cursor: wait; }
+
+/* 加载动画 (用于按钮) */
+.spinner-action {
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-left-color: var(--primary-color);
+  border-radius: 50%;
+  width: 14px; height: 14px;
+  animation: spin-action 1s linear infinite;
+}
+@keyframes spin-action { to { transform: rotate(360deg); } }
+.action-button.loading svg { display: none; } /* 加载时隐藏图标 */
+
+
+/* 分页 */
+.pagination-layout {
+  margin-top: 25px; padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex; justify-content: center;
+}
+.pagination-layout ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 5px; }
+.pagination-layout li button {
+  background-color: var(--card-bg); border: 1px solid #dcdfe6; color: var(--text-secondary);
+  padding: 6px 12px; min-width: 32px; height: 32px; border-radius: 4px; cursor: pointer;
+  transition: all 0.2s; font-size: 13px;
+}
+.pagination-layout li button:hover:not(:disabled) {
+  color: var(--primary-color); border-color: #c6e2ff; background-color: #ecf5ff;
+}
+.pagination-layout li.active button {
+  background-color: var(--primary-color); border-color: var(--primary-color);
+  color: white; font-weight: 500; cursor: default;
+}
+
+/* 侧边栏区域 */
+.sidebar-area {
+  flex: 1; /* 占据 1 份宽度 */
+  width: 300px; /* 设置一个基础宽度，flex 会调整 */
+  min-width: 280px; /* 最小宽度 */
+  flex-shrink: 0; /* 防止被压缩 */
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* 模块间距 */
+  position: sticky; /* 粘性定位 */
+  top: 20px; /* 距离顶部 */
+  align-self: flex-start; /* 保证自身高度不拉伸 */
+}
+
+.sidebar-module {
+  background-color: var(--card-bg);
+  border-radius: 6px;
+  padding: 15px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.06);
+}
+.sidebar-module h4 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px; /* 图标和文字间距 */
+  color: #1f2d3d;
+}
+
+/* 个人信息模块 */
+.user-info-content p {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.user-info-content strong {
+  color: var(--text-color);
+  font-weight: 500;
+}
+.user-points, .user-level {
+    font-weight: bold;
+    color: var(--primary-color); /* 示例颜色 */
+}
+.sidebar-action-button {
+    display: block; /* 独占一行 */
+    width: 100%; /* 宽度100% */
+    margin-top: 15px;
+    padding: 8px 15px;
+    font-size: 14px;
+    color: var(--primary-color);
+    background-color: #ecf5ff;
+    border: 1px solid #b3d8ff;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+.sidebar-action-button:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+
+/* 通知模块 */
+.notification-list-container {
+    max-height: 350px; /* 限制最大高度 */
+    overflow-y: auto; /* 超出滚动 */
+    margin-bottom: 10px; /* 与查看全部链接的间距 */
+    /* 简单的滚动条样式 (可选) */
+    scrollbar-width: thin;
+    scrollbar-color: #ccc var(--sidebar-bg);
+}
+.notification-list-container::-webkit-scrollbar { width: 6px; }
+.notification-list-container::-webkit-scrollbar-track { background: var(--sidebar-bg); border-radius: 3px;}
+.notification-list-container::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 3px; }
+
+.notification-list-sidebar { list-style: none; padding: 0; margin: 0; }
+.notification-list-sidebar li {
+  padding: 10px 5px 10px 20px; /* 左侧留出圆点空间 */
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  border-bottom: 1px dashed var(--border-color);
+  position: relative;
+}
+.notification-list-sidebar li:last-child { border-bottom: none; }
+
+.notification-dot-sidebar {
+  position: absolute; left: 5px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; background-color: var(--primary-color); border-radius: 50%;
+}
+.no-notifications-sidebar {
+    padding: 15px 0; text-align: center; color: var(--text-placeholder); font-style: italic;
+}
+.view-all-link {
+    display: block; /* 独占一行 */
+    text-align: center;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--text-placeholder);
+    text-decoration: none;
+}
+.view-all-link:hover {
+    color: var(--link-color);
+    text-decoration: underline;
+}
+
+
+/* 响应式布局 */
+@media (max-width: 992px) {
+  .dashboard-layout {
+    flex-direction: column; /* 垂直堆叠 */
+  }
+  .sidebar-area {
+    width: 100%; /* 宽度占满 */
+    position: static; /* 取消粘性定位 */
+    order: -1; /* 将侧边栏显示在列表上方 (可选) */
+  }
+  .main-content-area {
+      /* 可能需要调整宽度或边距 */
+  }
+}

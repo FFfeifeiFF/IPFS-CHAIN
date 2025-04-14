@@ -46,7 +46,7 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 	fmt.Println("Successfully connected to MySQL!")
-
+	fmt.Println(req.Username)
 	var storedHashedPassword string
 	err = db.QueryRow("SELECT password FROM user WHERE username = ?", req.Username).Scan(&storedHashedPassword)
 	if err != nil {

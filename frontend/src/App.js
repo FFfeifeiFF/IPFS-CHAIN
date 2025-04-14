@@ -8,6 +8,7 @@ import Search2 from './pages/search2';
 import Departlist from './pages/depart_list'
 import Fileupload from "./pages/Fileupload";
 import FileManager from "./pages/myfile";
+import ChangeProfilePage from "./pages/ChangeProfilePage";
 function App() {
   return (
     <div className="App">
@@ -21,6 +22,7 @@ function App() {
           <Route path="/depart_list" element={<Departlist/>} /> {}
           <Route path="/fileupload" element={<Fileupload/>} /> {}
           <Route path="/myfile" element={<FileManager/>} />{}
+          <Route path="/changeme" element={<ChangeProfilePage/>}/>{}
       </Routes>
     </div>
   );

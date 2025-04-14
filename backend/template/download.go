@@ -18,6 +18,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -288,146 +289,67 @@ func recordOperationOnSBC(db *sql.DB, username, operationType, targetIdentifier,
 	return nil // 即使等待确认失败，也认为发送成功
 }
 
-func DownloadFile(c *gin.Context) {
-	var ipfsHash string
-	id := c.DefaultQuery("id", "0")
-	username := c.DefaultQuery("username", "")
-	isCheck := c.DefaultQuery("check", "false") == "true" // 检查模式标志
-	fmt.Println(isCheck)
-	//fmt.Println(username)
-	//连接数据库
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库连接失败"})
-		return
-	}
-	defer db.Close()
+func DownloadFile(broker *Broker) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ipfsHash string
+		id := c.DefaultQuery("id", "0")
+		username := c.DefaultQuery("username", "")
+		isCheck := c.DefaultQuery("check", "false") == "true" // 检查模式标志
+		fmt.Println(isCheck)
+		//fmt.Println(username)
+		//连接数据库
+		dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+		db, err := sql.Open("mysql", dsn)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库连接失败"})
+			return
+		}
+		defer db.Close()
 
-	// 查询当前页的文章的TX值
-	query := `
-    SELECT m.hash, m.points, u.username
+		// 查询当前页的文章的TX值
+		query := `
+    SELECT m.hash, m.points, u.username, m.message_name
     FROM message m
     JOIN user u ON m.user_id = u.id
     WHERE m.message_id = ?  
 `
-	var hash string
-	var articlePoints int
-	var ownerUsername string
-	err = db.QueryRow(query, id).Scan(&hash, &articlePoints, &ownerUsername) // yourID 是你要查询的ID参数
-	//fmt.Println(hash)
-	//fmt.Println(points)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			fmt.Println("没有找到对应的记录")
-			c.JSON(http.StatusNotFound, gin.H{"error": "记录不存在"})
-		} else {
-			fmt.Println("数据库查询失败:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库查询失败"})
+		var hash string
+		var articlePoints int
+		var ownerUsername string
+		var articleTitle string
+		err = db.QueryRow(query, id).Scan(&hash, &articlePoints, &ownerUsername, &articleTitle) // yourID 是你要查询的ID参数
+		//fmt.Println(hash)
+		//fmt.Println(points)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				fmt.Println("没有找到对应的记录")
+				c.JSON(http.StatusNotFound, gin.H{"error": "记录不存在"})
+			} else {
+				fmt.Println("数据库查询失败:", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库查询失败"})
+			}
+			return
 		}
-		return
-	}
 
-	// 2. 查询用户积分
-	var userPoints int
-	err = db.QueryRow(`
+		// 2. 查询用户积分
+		var userPoints int
+		err = db.QueryRow(`
         SELECT points 
         FROM user 
         WHERE username = ?`, username).Scan(&userPoints)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "查询用户积分失败"})
-		}
-		return
-	}
-	// --- 判断下载者是否是文件所有者 ---
-	isOwnerDownloading := (username == ownerUsername)
-	fmt.Println(555)
-	fmt.Println(isOwnerDownloading)
-	// 3. 检查积分是否足够
-	if userPoints < articlePoints {
-		c.JSON(http.StatusPaymentRequired, gin.H{
-			"error":           "积分不足",
-			"required_points": articlePoints,
-			"current_points":  userPoints,
-		})
-		return
-	}
-
-	// 如果是检查模式，只返回可下载信息
-	// --- 处理检查模式 ---
-	if isCheck {
-		if isOwnerDownloading {
-			// 所有者检查自己的文件，总是可以下载，所需积分为0
-			c.JSON(http.StatusOK, gin.H{
-				"can_download":    true,
-				"required_points": 0, // 所有者下载免费
-				"current_points":  userPoints,
-				"is_owner":        true,
-			})
-		} else {
-			// 非所有者检查，按正常逻辑判断
-			canDownload := userPoints >= articlePoints
-			c.JSON(http.StatusOK, gin.H{
-				"can_download":    canDownload,
-				"required_points": articlePoints,
-				"current_points":  userPoints,
-				"is_owner":        false,
-			})
-		}
-		return // 检查模式响应后结束请求
-	}
-	// --- 处理下载流程 (非检查模式) ---
-	var sbcTargetIdentifier string // 用于SBC记录的目标标识符
-
-	if isOwnerDownloading {
-		// --- 情况 1: 所有者下载自己的文件 ---
-		log.Printf("用户 %s 正在下载自己的文件 (ID: %s)", username, id)
-
-		// 不需要进行积分转移
-		// 只需要记录一次区块链交易，标记为自下载，积分为0
-		err = recordTransactionToBlockchainAndDB(
-			c,
-			db,
-			username,        // 执行操作的用户是自己
-			"self_download", // 定义一个新的操作类型表示“自下载”
-			0,               // 积分变化量为 0
-		)
 		if err != nil {
-			// 区块链记录失败通常不应阻止下载，但需要记录日志
-			log.Printf("警告: 用户 %s 的自下载区块链记录失败 (文件ID: %s): %v", username, id, err)
-		}
-		uploadTx, err := getTransactionByHash(hash) // hash 是从 message 表查出来的 articleTxHash
-		if err != nil {
-			log.Printf("错误: 下载前获取原始交易失败 (Tx: %s): %v", hash, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取文件源信息失败"})
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "查询用户积分失败"})
+			}
 			return
 		}
-		if uploadTx == nil || uploadTx.Input == "" || len(uploadTx.Input) <= 10 {
-			log.Printf("错误: 无效的文件源交易数据 (Tx: %s)", hash)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "无效的文件源交易数据"})
-			return
-		}
-		ipfsHash, _, err = decodeStoreFileTx(uploadTx.Input) // *** 调用下面新增的辅助函数 ***
-		if err != nil {
-			log.Printf("错误: 下载前解析 IPFS Hash 失败 (Tx: %s): %v", hash, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "解析文件源信息失败"})
-			return
-		}
-		sbcTargetIdentifier = ipfsHash // SBC记录下载的目标是IPFS Hash
-		// *** 在执行下载前，记录 SBC 操作 ***
-		errSBC := recordOperationOnSBC(db, username, "self_download", sbcTargetIdentifier, "无操作")
-		if errSBC != nil {
-			log.Printf("警告: 记录 SBC 自下载操作失败: %v", errSBC)
-			// 通常只记录警告，不中断下载
-		}
-	} else {
-		// --- 情况 2: 非所有者下载文件 ---
-		log.Printf("用户 %s 正在下载 %s 的文件 (ID: %s), 需要 %d 积分", username, ownerUsername, id, articlePoints)
-
-		// 1. 再次检查积分 (非检查模式下是最终确认)
+		// --- 判断下载者是否是文件所有者 ---
+		isOwnerDownloading := (username == ownerUsername)
+		fmt.Println(555)
+		fmt.Println(isOwnerDownloading)
+		// 3. 检查积分是否足够
 		if userPoints < articlePoints {
 			c.JSON(http.StatusPaymentRequired, gin.H{
 				"error":           "积分不足",
@@ -437,152 +359,251 @@ func DownloadFile(c *gin.Context) {
 			return
 		}
 
-		// 2. 执行数据库积分转移
-		txDB, err := db.Begin() // 启动数据库事务
+		// 如果是检查模式，只返回可下载信息
+		// --- 处理检查模式 ---
+		if isCheck {
+			if isOwnerDownloading {
+				// 所有者检查自己的文件，总是可以下载，所需积分为0
+				c.JSON(http.StatusOK, gin.H{
+					"can_download":    true,
+					"required_points": 0, // 所有者下载免费
+					"current_points":  userPoints,
+					"is_owner":        true,
+				})
+			} else {
+				// 非所有者检查，按正常逻辑判断
+				canDownload := userPoints >= articlePoints
+				c.JSON(http.StatusOK, gin.H{
+					"can_download":    canDownload,
+					"required_points": articlePoints,
+					"current_points":  userPoints,
+					"is_owner":        false,
+				})
+			}
+			return // 检查模式响应后结束请求
+		}
+		// --- 处理下载流程 (非检查模式) ---
+		var sbcTargetIdentifier string // 用于SBC记录的目标标识符
+
+		if isOwnerDownloading {
+			// --- 情况 1: 所有者下载自己的文件 ---
+			log.Printf("用户 %s 正在下载自己的文件 (ID: %s)", username, id)
+
+			// 不需要进行积分转移
+			// 只需要记录一次区块链交易，标记为自下载，积分为0
+			err = recordTransactionToBlockchainAndDB(
+				c,
+				db,
+				username,        // 执行操作的用户是自己
+				"self_download", // 定义一个新的操作类型表示“自下载”
+				0,               // 积分变化量为 0
+			)
+			if err != nil {
+				// 区块链记录失败通常不应阻止下载，但需要记录日志
+				log.Printf("警告: 用户 %s 的自下载区块链记录失败 (文件ID: %s): %v", username, id, err)
+			}
+			uploadTx, err := getTransactionByHash(hash) // hash 是从 message 表查出来的 articleTxHash
+			if err != nil {
+				log.Printf("错误: 下载前获取原始交易失败 (Tx: %s): %v", hash, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取文件源信息失败"})
+				return
+			}
+			if uploadTx == nil || uploadTx.Input == "" || len(uploadTx.Input) <= 10 {
+				log.Printf("错误: 无效的文件源交易数据 (Tx: %s)", hash)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "无效的文件源交易数据"})
+				return
+			}
+			ipfsHash, _, err = decodeStoreFileTx(uploadTx.Input) // *** 调用下面新增的辅助函数 ***
+			if err != nil {
+				log.Printf("错误: 下载前解析 IPFS Hash 失败 (Tx: %s): %v", hash, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "解析文件源信息失败"})
+				return
+			}
+			sbcTargetIdentifier = ipfsHash // SBC记录下载的目标是IPFS Hash
+			// *** 在执行下载前，记录 SBC 操作 ***
+			errSBC := recordOperationOnSBC(db, username, "self_download", sbcTargetIdentifier, "无操作")
+			if errSBC != nil {
+				log.Printf("警告: 记录 SBC 自下载操作失败: %v", errSBC)
+				// 通常只记录警告，不中断下载
+			}
+		} else {
+			// --- 情况 2: 非所有者下载文件 ---
+			log.Printf("用户 %s 正在下载 %s 的文件 (ID: %s), 需要 %d 积分", username, ownerUsername, id, articlePoints)
+
+			// 1. 再次检查积分 (非检查模式下是最终确认)
+			if userPoints < articlePoints {
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"error":           "积分不足",
+					"required_points": articlePoints,
+					"current_points":  userPoints,
+				})
+				return
+			}
+
+			// 2. 执行数据库积分转移
+			txDB, err := db.Begin() // 启动数据库事务
+			if err != nil {
+				log.Printf("数据库事务启动失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库事务启动失败"})
+				return
+			}
+			// 使用 defer txDB.Rollback() 保证在出错或未Commit时回滚
+			defer txDB.Rollback()
+
+			// 从下载者扣除积分
+			_, err = txDB.Exec(`UPDATE user SET points = points - ? WHERE username = ?`, articlePoints, username)
+			if err != nil {
+				log.Printf("数据库扣除用户 %s 积分失败: %v", username, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "扣除积分失败"})
+				return
+			}
+
+			// 给文件所有者增加积分
+			_, err = txDB.Exec(`UPDATE user SET points = points + ? WHERE username = ?`, articlePoints, ownerUsername)
+			if err != nil {
+				log.Printf("数据库增加用户 %s 积分失败: %v", ownerUsername, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "增加所有者积分失败"})
+				return
+			}
+
+			// 提交数据库事务
+			if err = txDB.Commit(); err != nil {
+				log.Printf("数据库事务提交失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库事务提交失败"})
+				return
+			}
+			log.Printf("数据库积分转移成功: %s (-%d) -> %s (+%d)", username, articlePoints, ownerUsername, articlePoints)
+
+			// 3. 记录两次区块链交易
+			// 记录下载者的扣分交易
+			err = recordTransactionToBlockchainAndDB(
+				c,
+				db,
+				username,
+				"download",
+				-int64(articlePoints), // 负数表示扣分
+			)
+			if err != nil {
+				log.Printf("警告: 用户 %s 的下载扣分区块链记录失败 (文件ID: %s): %v", username, id, err)
+				// 根据业务需求决定是否需要中断操作
+			}
+
+			// 记录所有者的奖励交易
+			err = recordTransactionToBlockchainAndDB(
+				c,
+				db,
+				ownerUsername,
+				"upload_reward",
+				int64(articlePoints), // 正数表示奖励
+			)
+			if err != nil {
+				log.Printf("警告: 用户 %s 的上传奖励区块链记录失败 (文件ID: %s): %v", ownerUsername, id, err)
+			}
+			// *** 获取 IPFS Hash (同上) ***
+			uploadTx, err := getTransactionByHash(hash)
+			if err != nil {
+				log.Printf("错误: 下载前获取原始交易失败 (Tx: %s): %v", hash, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取文件源信息失败"})
+				return
+			}
+			if uploadTx == nil || uploadTx.Input == "" || len(uploadTx.Input) <= 10 {
+				log.Printf("错误: 无效的文件源交易数据 (Tx: %s)", hash)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "无效的文件源交易数据"})
+				return
+			}
+			ipfsHash, _, err = decodeStoreFileTx(uploadTx.Input) // *** 调用下面新增的辅助函数 ***
+			if err != nil {
+				log.Printf("错误: 下载前解析 IPFS Hash 失败 (Tx: %s): %v", hash, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "解析文件源信息失败"})
+				return
+			}
+			sbcTargetIdentifier = ipfsHash
+
+			// *** 在执行下载前，记录 SBC 操作 ***
+			errSBC := recordOperationOnSBC(db, username, "download", sbcTargetIdentifier, "无操作")
+			if errSBC != nil {
+				log.Printf("警告: 记录 SBC 下载操作失败: %v", errSBC)
+			}
+		}
+		// *** 新增：发送 SSE 通知给文件所有者 ***
+		articleIDInt, convErr := strconv.Atoi(id)
+		if convErr != nil {
+			log.Printf("警告: 无法将文章 ID '%s' 转换为整数: %v。通知中将使用 ID 0。", id, convErr)
+			articleIDInt = 0 // 使用默认值或记录更严重的错误
+		}
+
+		notification := Notification{
+			Type:         "downloadNotification", // 与前端对应
+			Downloader:   username,               // 是谁下载了
+			ArticleID:    articleIDInt,           // 哪个文章的 ID
+			ArticleTitle: articleTitle,           // 哪个文章的标题
+			Timestamp:    time.Now(),             // 时间戳 (Broker 也会设置，这里设不设都行)
+		}
+		// 使用注入的 broker 发送通知给 ownerUsername
+		broker.SendNotificationToUser(ownerUsername, notification)
+		log.Printf("已尝试发送下载通知给 %s (下载者: %s, 文章: %s)", ownerUsername, username, articleTitle)
+		// *************************************
+		// 2. 通过 Ganache RPC 获取交易详情
+		tx, err := getTransactionByHash(hash)
 		if err != nil {
-			log.Printf("数据库事务启动失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库事务启动失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取交易失败: " + err.Error()})
 			return
 		}
-		// 使用 defer txDB.Rollback() 保证在出错或未Commit时回滚
-		defer txDB.Rollback()
 
-		// 从下载者扣除积分
-		_, err = txDB.Exec(`UPDATE user SET points = points - ? WHERE username = ?`, articlePoints, username)
+		// 3. 解析交易输入数据（调用智能合约的 ABI 数据）
+		contractAbi, err := abi.JSON(strings.NewReader(FileStorageMetaData.ABI))
 		if err != nil {
-			log.Printf("数据库扣除用户 %s 积分失败: %v", username, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "扣除积分失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ABI 解析失败"})
 			return
 		}
-
-		// 给文件所有者增加积分
-		_, err = txDB.Exec(`UPDATE user SET points = points + ? WHERE username = ?`, articlePoints, ownerUsername)
-		if err != nil {
-			log.Printf("数据库增加用户 %s 积分失败: %v", ownerUsername, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "增加所有者积分失败"})
+		// 4. 解码交易输入数据
+		if len(tx.Input) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "不是合约调用交易"})
 			return
 		}
+		methodSig := tx.Input[:10] // 前 4 字节（0x + 8字符）
+		method, err := contractAbi.MethodById(common.FromHex(methodSig))
 
-		// 提交数据库事务
-		if err = txDB.Commit(); err != nil {
-			log.Printf("数据库事务提交失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库事务提交失败"})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "无法识别交易方法"})
 			return
 		}
-		log.Printf("数据库积分转移成功: %s (-%d) -> %s (+%d)", username, articlePoints, ownerUsername, articlePoints)
-
-		// 3. 记录两次区块链交易
-		// 记录下载者的扣分交易
-		err = recordTransactionToBlockchainAndDB(
-			c,
-			db,
-			username,
-			"download",
-			-int64(articlePoints), // 负数表示扣分
-		)
-		if err != nil {
-			log.Printf("警告: 用户 %s 的下载扣分区块链记录失败 (文件ID: %s): %v", username, id, err)
-			// 根据业务需求决定是否需要中断操作
-		}
-
-		// 记录所有者的奖励交易
-		err = recordTransactionToBlockchainAndDB(
-			c,
-			db,
-			ownerUsername,
-			"upload_reward",
-			int64(articlePoints), // 正数表示奖励
-		)
-		if err != nil {
-			log.Printf("警告: 用户 %s 的上传奖励区块链记录失败 (文件ID: %s): %v", ownerUsername, id, err)
-		}
-		// *** 获取 IPFS Hash (同上) ***
-		uploadTx, err := getTransactionByHash(hash)
-		if err != nil {
-			log.Printf("错误: 下载前获取原始交易失败 (Tx: %s): %v", hash, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取文件源信息失败"})
+		if method.Name != "storeFile" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "交易不是 StoreFile 调用"})
 			return
 		}
-		if uploadTx == nil || uploadTx.Input == "" || len(uploadTx.Input) <= 10 {
-			log.Printf("错误: 无效的文件源交易数据 (Tx: %s)", hash)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "无效的文件源交易数据"})
-			return
+		data := common.FromHex(tx.Input[10:])
+		args := abi.Arguments{
+			{Name: "_user", Type: mustNewType("string")},
+			{Name: "_filename", Type: mustNewType("string")},
+			{Name: "_ipfsHash", Type: mustNewType("string")},
+			{Name: "_description", Type: mustNewType("string")},
 		}
-		ipfsHash, _, err = decodeStoreFileTx(uploadTx.Input) // *** 调用下面新增的辅助函数 ***
+		decoded, err := args.Unpack(data)
+		//4.去IPFS下载
+		ipfsHash1 := decoded[2].(string)
+		fmt.Println(ipfsHash1)
+		sh := shell.NewShell("localhost:5001") // IPFS API 默认端口
+		data2, err := sh.Cat(ipfsHash1)        // 返回 io.ReadCloser
 		if err != nil {
-			log.Printf("错误: 下载前解析 IPFS Hash 失败 (Tx: %s): %v", hash, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "解析文件源信息失败"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "IPFS 文件读取失败: " + err.Error()})
 			return
 		}
-		sbcTargetIdentifier = ipfsHash
+		defer data2.Close() // 重要！必须关闭 ReadCloser
 
-		// *** 在执行下载前，记录 SBC 操作 ***
-		errSBC := recordOperationOnSBC(db, username, "download", sbcTargetIdentifier, "无操作")
-		if errSBC != nil {
-			log.Printf("警告: 记录 SBC 下载操作失败: %v", errSBC)
+		// 获取文件名（从智能合约参数中提取）
+		filename := decoded[1].(string) // _filename 是第二个参数
+
+		// 设置响应头，告诉浏览器这是文件下载
+		c.Header("Content-Disposition", "attachment; filename="+filename)
+		c.Header("Content-Type", "application/octet-stream") // 二进制流，通用文件类型
+
+		// 直接将文件流式传输到客户端
+		_, err = io.Copy(c.Writer, data2)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "文件传输失败: " + err.Error()})
+			return
 		}
-	}
-
-	// 2. 通过 Ganache RPC 获取交易详情
-	tx, err := getTransactionByHash(hash)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取交易失败: " + err.Error()})
-		return
-	}
-
-	// 3. 解析交易输入数据（调用智能合约的 ABI 数据）
-	contractAbi, err := abi.JSON(strings.NewReader(FileStorageMetaData.ABI))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ABI 解析失败"})
-		return
-	}
-	// 4. 解码交易输入数据
-	if len(tx.Input) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "不是合约调用交易"})
-		return
-	}
-	methodSig := tx.Input[:10] // 前 4 字节（0x + 8字符）
-	method, err := contractAbi.MethodById(common.FromHex(methodSig))
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法识别交易方法"})
-		return
-	}
-	if method.Name != "storeFile" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "交易不是 StoreFile 调用"})
-		return
-	}
-	data := common.FromHex(tx.Input[10:])
-	args := abi.Arguments{
-		{Name: "_user", Type: mustNewType("string")},
-		{Name: "_filename", Type: mustNewType("string")},
-		{Name: "_ipfsHash", Type: mustNewType("string")},
-		{Name: "_description", Type: mustNewType("string")},
-	}
-	decoded, err := args.Unpack(data)
-	//4.去IPFS下载
-	ipfsHash1 := decoded[2].(string)
-	fmt.Println(ipfsHash1)
-	sh := shell.NewShell("localhost:5001") // IPFS API 默认端口
-	data2, err := sh.Cat(ipfsHash1)        // 返回 io.ReadCloser
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "IPFS 文件读取失败: " + err.Error()})
-		return
-	}
-	defer data2.Close() // 重要！必须关闭 ReadCloser
-
-	// 获取文件名（从智能合约参数中提取）
-	filename := decoded[1].(string) // _filename 是第二个参数
-
-	// 设置响应头，告诉浏览器这是文件下载
-	c.Header("Content-Disposition", "attachment; filename="+filename)
-	c.Header("Content-Type", "application/octet-stream") // 二进制流，通用文件类型
-
-	// 直接将文件流式传输到客户端
-	_, err = io.Copy(c.Writer, data2)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "文件传输失败: " + err.Error()})
-		return
 	}
 }
 

@@ -16,7 +16,7 @@ function Departlist() {
             <Head username={username}/>
             <div className="content-area">
              <ArticleList username={username}/>
-                 <Sidebar2 username={username} />
+                 {/*<Sidebar2 username={username} />*/}
             </div>
             <Footer/>
         </div>
