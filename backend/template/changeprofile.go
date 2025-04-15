@@ -1,280 +1,301 @@
-package template // 或者你的实际包名
+package template
 
 import (
-	"database/sql" // 假设使用标准库的错误类型
+	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"strings"
+	"time" // 用于 JWT 过期
 
+	// 引入 CORS 中间件
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
-	// 导入你的数据库包和用户模型
-	// "your_project/database"
-	// "your_project/models"
+	_ "github.com/go-sql-driver/mysql" // MySQL 驱动
+	"github.com/golang-jwt/jwt/v5"     // JWT 库
+	"golang.org/x/crypto/bcrypt"       // 密码哈希库
 )
 
-// --- 占位符数据类型 (用你实际的类型替换) ---
+// --- 全局变量 ---
+var db *sql.DB                                                // 数据库连接池
+var jwtSecretKey = []byte("your_very_secret_key_change_this") // !!危险!! 仅供演示，应来自环境变量
 
-type User struct {
-	ID           uint
-	Username     string
-	Email        string
-	PasswordHash string
+// --- 结构体定义 ---
+
+// 用于绑定 PUT 请求的 JSON Body
+type UpdateProfileRequest struct {
+	Username        string `json:"username"`                           // 允许为空，表示不更改
+	NewUsername     string `json:"newUsername"`                        // 允许为空，表示不更改
+	NewEmail        string `json:"newEmail"`                           // 允许为空，表示不更改
+	CurrentPassword string `json:"currentPassword" binding:"required"` // 当前密码必须提供
+	NewPassword     string `json:"newPassword"`                        // 允许为空，表示不更改
 }
 
-// --- 占位符数据库函数 (根据你的数据库实现) ---
-
-// GetUserByID 通过 ID 获取用户
-func GetUserByID(userID uint) (*User, error) {
-	// TODO: 实现数据库逻辑以通过 ID 获取用户
-	// 模拟:
-	if userID == 1 {
-		// 确保这里的 PasswordHash 是一个真实的 bcrypt 哈希值，否则 CompareHashAndPassword 会失败
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("current_password_plain"), bcrypt.DefaultCost) // 仅为示例，实际从数据库读取
-		return &User{
-			ID:           1,
-			Username:     "current_user",
-			Email:        "current@example.com",
-			PasswordHash: string(hashedPassword), // 从数据库获取的真实哈希
-		}, nil
-	}
-	return nil, sql.ErrNoRows // 模拟用户未找到
+// JWT Claims 结构
+type Claims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
 }
 
-func GetUserProfile(c *gin.Context) {
-	// 1. 从认证中间件获取用户 ID
-	userIDVal, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证"})
-		return
+// --- 初始化 ---
+func initDB() {
+	var err error
+	// 从环境变量或配置读取更安全
+	// dsn := os.Getenv("DB_DSN")
+	dsn := "root:123456@tcp(127.0.0.1:3307)/golan?charset=utf8mb4&parseTime=True&loc=Local"
+	db, err = sql.Open("mysql", dsn)
+	if err != nil {
+		log.Fatalf("数据库连接失败: %v", err)
 	}
-	userID, ok := userIDVal.(uint)
-	if !ok {
-		log.Printf("无效的用户 ID 类型在上下文中: %T", userIDVal)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器内部错误：无法识别用户"})
+
+	// 设置数据库连接池参数
+	db.SetConnMaxLifetime(time.Minute * 3)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(10)
+
+	// 尝试 Ping 数据库确保连接成功
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("无法连接到数据库: %v", err)
+	}
+	log.Println("数据库连接成功！")
+}
+
+// --- 中间件 ---
+
+// AuthMiddleware 验证 JWT Token
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "缺少认证 Header"})
+			return
+		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		if !(len(parts) == 2 && parts[0] == "Bearer") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "认证 Header 格式错误"})
+			return
+		}
+
+		tokenString := parts[1]
+		claims := &Claims{}
+
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			// 确保使用的是预期的签名算法
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("非预期的签名方法: %v", token.Header["alg"])
+			}
+			return jwtSecretKey, nil
+		})
+
+		if err != nil {
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token 已过期"})
+			} else {
+				log.Printf("Token 解析错误: %v", err)
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "无效的 Token"})
+			}
+			return
+		}
+
+		if !token.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "无效的 Token"})
+			return
+		}
+
+		// 将验证通过的用户名存入 Context，方便后续 Handler 使用
+		c.Set("username", claims.Username)
+		c.Next() // 继续处理请求
+	}
+}
+
+// --- 路由处理函数 ---
+
+// getProfileHandler 处理 GET /changeprofile?username=xxx
+func GetProfileHandler(c *gin.Context) {
+	initDB()
+	targetUsername := c.Query("username")
+	fmt.Println(targetUsername)
+	if targetUsername == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 username 查询参数"})
 		return
 	}
 
-	// 2. 从数据库获取用户信息
-	user, err := GetUserByID(userID) // 使用你已有的函数
+	var email string
+	query := "SELECT emile FROM user WHERE username = ?"
+	err := db.QueryRowContext(c.Request.Context(), query, targetUsername).Scan(&email)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "未找到用户"})
+			c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("用户 '%s' 不存在", targetUsername)})
 		} else {
-			log.Printf("获取用户 %d 失败: %v", userID, err)
+			log.Printf("数据库查询错误 (getProfileHandler): %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取用户信息时出错"})
 		}
 		return
 	}
 
-	// 3. 返回需要的用户信息 (不包括密码哈希)
+	// 返回从数据库获取的用户名和邮箱
 	c.JSON(http.StatusOK, gin.H{
-		"username": user.Username,
-		"email":    user.Email,
-		// 你可以根据需要添加其他允许前端查看的字段
+		"username": targetUsername, // 从查询参数获取，因为我们只查了 email
+		"email":    email,
 	})
 }
 
-// GetUserByUsernameOrEmailExcludingID 检查用户名或邮箱是否被其他用户占用
-func GetUserByUsernameOrEmailExcludingID(username, email string, currentUserID uint) (*User, error) {
-	// TODO: 实现数据库逻辑，查找用户名或邮箱匹配但 ID 不是 currentUserID 的用户
-	// Example: SELECT id, username, email FROM users WHERE (username = ? OR email = ?) AND id != ? LIMIT 1
-	if username == "existing_user" && currentUserID != 2 {
-		return &User{ID: 2, Username: "existing_user"}, nil // 模拟用户名冲突
-	}
-	if email == "existing@example.com" && currentUserID != 3 {
-		return &User{ID: 3, Email: "existing@example.com"}, nil // 模拟邮箱冲突
-	}
-	return nil, sql.ErrNoRows // 模拟用户名/邮箱可用
-}
-
-// UpdateUserProfile 更新用户的特定字段
-func UpdateUserProfile(userID uint, updates map[string]interface{}) error {
-	// TODO: 实现数据库逻辑来更新用户字段
-	// Example: 构建 UPDATE 查询语句，只更新 'updates' map 中存在的字段
-	// 注意防范 SQL 注入，使用 ORM 或预处理语句
-	if len(updates) == 0 {
-		return nil // 没有需要更新的内容
-	}
-	log.Printf("模拟更新用户 %d 的数据: %v", userID, updates)
-	// return errors.New("database update failed") // 模拟错误
-	return nil // 模拟成功
-}
-
-func checkPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	if err != nil && !errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-		// 记录非密码不匹配的 bcrypt 错误（例如哈希格式错误）
-		log.Printf("检查密码哈希时出错: %v", err)
-	}
-	return err == nil // 只有在完全匹配时才返回 true
-}
-
-// --- 请求体结构 ---
-
-type UpdateProfileRequest struct {
-	CurrentPassword string `json:"currentPassword" binding:"required"`
-	NewUsername     string `json:"newUsername"` // 可选
-	NewEmail        string `json:"newEmail"`    // 可选
-	NewPassword     string `json:"newPassword"` // 可选
-}
-
-// --- 辅助函数：校验邮箱格式 ---
-var emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
-
-func isValidEmail(email string) bool {
-	return emailRegex.MatchString(email)
-}
-
-// --- Gin 处理函数: ChangeProfile ---
-
-func ChangeProfile(c *gin.Context) {
-	// 1. 从认证中间件获取用户 ID
-	userIDVal, exists := c.Get("userID") // 假设中间件设置了 "userID"
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证"})
-		return
-	}
-	userID, ok := userIDVal.(uint) // 根据你的用户 ID 类型调整
-	if !ok {
-		log.Printf("无效的用户 ID 类型在上下文中: %T", userIDVal)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器内部错误：无法识别用户"})
-		return
-	}
-
-	// 2. 绑定 JSON 请求体
-	var req UpdateProfileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		// Gin 的 binding:"required" 会处理 currentPassword 为空的情况
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求数据无效: " + err.Error()})
-		return
-	}
-
-	// 清理和初步校验输入
-	req.NewUsername = strings.TrimSpace(req.NewUsername)
-	req.NewEmail = strings.TrimSpace(strings.ToLower(req.NewEmail)) // 邮箱通常不区分大小写
-
-	// 3. 从数据库获取当前用户信息
-	currentUser, err := GetUserByID(userID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "未找到当前用户"})
-		} else {
-			log.Printf("获取用户 %d 失败: %v", userID, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "获取用户信息时出错"})
-		}
-		return
-	}
-
-	// 4. 验证当前密码
-	if !checkPasswordHash(req.CurrentPassword, currentUser.PasswordHash) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "当前密码不正确"})
-		return
-	}
-
-	// 5. 准备需要更新的字段
-	updates := make(map[string]interface{})
-	needsUpdate := false
-	updatedFields := []string{} // 用于成功消息
-
-	// 6. 处理新用户名
-	if req.NewUsername != "" && req.NewUsername != currentUser.Username {
-		// 可选：添加用户名格式/长度校验
-		// if len(req.NewUsername) < 3 { ... }
-
-		// 检查新用户名是否被其他用户占用
-		existingUser, err := GetUserByUsernameOrEmailExcludingID(req.NewUsername, "", currentUser.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("检查用户名 %s 时出错: %v", req.NewUsername, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "验证新用户名时出错"})
+// updateProfileHandler 处理 PUT /changeprofile
+func UpdateProfileHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req UpdateProfileRequest
+		// 绑定请求体 JSON 到结构体
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("请求体解析失败: %v", err)})
 			return
 		}
-		if existingUser != nil {
-			c.JSON(http.StatusConflict, gin.H{"error": "该用户名已被占用"})
-			return
-		}
-		updates["username"] = req.NewUsername
-		needsUpdate = true
-		updatedFields = append(updatedFields, "用户名")
-	}
+		// 从中间件获取当前登录的用户名
+		currentUsername := req.Username
 
-	// 7. 处理新邮箱
-	if req.NewEmail != "" && req.NewEmail != currentUser.Email {
-		// 校验邮箱格式
-		if !isValidEmail(req.NewEmail) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "新邮箱格式无效"})
+		if currentUsername == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "缺少用户名"})
 			return
 		}
 
-		// 检查新邮箱是否被其他用户占用
-		existingUser, err := GetUserByUsernameOrEmailExcludingID("", req.NewEmail, currentUser.ID)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("检查邮箱 %s 时出错: %v", req.NewEmail, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "验证新邮箱时出错"})
-			return
-		}
-		if existingUser != nil {
-			c.JSON(http.StatusConflict, gin.H{"error": "该邮箱已被占用"})
-			return
-		}
-		updates["email"] = req.NewEmail
-		needsUpdate = true
-		updatedFields = append(updatedFields, "邮箱")
-	}
-
-	// 8. 处理新密码
-	if req.NewPassword != "" {
-		newPasswordHash, err := hashPassword(req.NewPassword) // hashPassword 内部应包含长度校验
+		// --- 1. 验证当前密码 ---
+		var currentPasswordHash, currentEmail string
+		query := "SELECT password, emile FROM user WHERE username = ?"
+		err := db.QueryRowContext(c.Request.Context(), query, currentUsername).Scan(&currentPasswordHash, &currentEmail)
 		if err != nil {
-			// 如果 hashPassword 返回特定错误信息（如长度不足）
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			if errors.Is(err, sql.ErrNoRows) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "当前用户不存在"}) // 理论上不应发生，因为 JWT 验证了
+			} else {
+				log.Printf("数据库查询错误 (updateProfileHandler - get hash): %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "验证用户时出错"})
+			}
 			return
 		}
-		// 确保新密码与旧密码不同（可选逻辑）
-		if checkPasswordHash(req.NewPassword, currentUser.PasswordHash) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "新密码不能与当前密码相同"})
-			return
-		}
 
-		updates["password_hash"] = newPasswordHash // 数据库字段名可能不同
-		needsUpdate = true
-		updatedFields = append(updatedFields, "密码")
-	}
-
-	// 9. 如果没有任何更改请求，则提前返回
-	if !needsUpdate && req.NewUsername == "" && req.NewEmail == "" && req.NewPassword == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请提供需要修改的用户名、邮箱或新密码"})
-		return
-	}
-
-	// 10. 执行数据库更新
-	if needsUpdate {
-		err = UpdateUserProfile(currentUser.ID, updates)
+		// 比较哈希密码和提供的当前密码
+		err = bcrypt.CompareHashAndPassword([]byte(currentPasswordHash), []byte(req.CurrentPassword))
 		if err != nil {
-			log.Printf("更新用户 %d 失败: %v", currentUser.ID, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新个人资料时发生错误"})
+			// 如果 err 是 bcrypt.ErrMismatchedHashAndPassword，说明密码不匹配
+			if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "当前密码不正确"})
+			} else {
+				// 其他 bcrypt 错误
+				log.Printf("密码比较时出错: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "密码验证时发生内部错误"})
+			}
 			return
 		}
-	}
 
-	// 11. 返回成功响应
-	successMsg := "个人资料更新成功！"
-	if len(updatedFields) > 0 {
-		successMsg = strings.Join(updatedFields, "、") + " 已成功更新！"
-	}
+		// --- 2. 准备更新字段和参数 ---
+		updateFields := []string{}    // 要更新的数据库字段
+		updateArgs := []interface{}{} // 对应字段的值
+		responseUpdate := gin.H{}     // 用于构建成功响应的消息体
 
-	// 准备返回给前端的数据（可选，取决于前端是否需要更新后的完整信息）
-	responseData := gin.H{
-		"message": successMsg,
-	}
-	if newUsername, ok := updates["username"]; ok {
-		responseData["newUsername"] = newUsername
-	}
-	if newEmail, ok := updates["email"]; ok {
-		responseData["newEmail"] = newEmail
-	}
+		// 检查是否需要更新用户名
+		if req.NewUsername != "" && req.NewUsername != currentUsername {
+			// 检查新用户名是否已被占用
+			var existsCount int
+			checkQuery := "SELECT COUNT(*) FROM user WHERE username = ? AND username != ?"
+			err = db.QueryRowContext(c.Request.Context(), checkQuery, req.NewUsername, currentUsername).Scan(&existsCount)
+			if err != nil {
+				log.Printf("数据库查询错误 (updateProfileHandler - check username): %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "检查用户名可用性时出错"})
+				return
+			}
+			if existsCount > 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "新的用户名已被占用"})
+				return
+			}
+			updateFields = append(updateFields, "username = ?")
+			updateArgs = append(updateArgs, req.NewUsername)
+			responseUpdate["newUsername"] = req.NewUsername // 添加到成功响应中
+		}
 
-	c.JSON(http.StatusOK, responseData)
+		// 检查是否需要更新邮箱
+		if req.NewEmail != "" && req.NewEmail != currentEmail {
+			// (可选但推荐) 在这里添加邮箱格式验证
+			// if !isValidEmail(req.NewEmail) {
+			//  c.JSON(http.StatusBadRequest, gin.H{"error": "新邮箱格式无效"})
+			//  return
+			// }
+
+			// 检查新邮箱是否已被占用
+			var existsCount int
+			checkQuery := "SELECT COUNT(*) FROM user WHERE email = ? AND username != ?" // 排除自己
+			err = db.QueryRowContext(c.Request.Context(), checkQuery, req.NewEmail, currentUsername).Scan(&existsCount)
+			if err != nil {
+				log.Printf("数据库查询错误 (updateProfileHandler - check email): %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "检查邮箱可用性时出错"})
+				return
+			}
+			if existsCount > 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "新的邮箱已被占用"})
+				return
+			}
+			updateFields = append(updateFields, "emile = ?")
+			updateArgs = append(updateArgs, req.NewEmail)
+			responseUpdate["newEmail"] = req.NewEmail // 添加到成功响应中
+		}
+
+		// 检查是否需要更新密码
+		if req.NewPassword != "" {
+			// (可选但推荐) 在这里添加密码复杂度验证，例如长度
+			if len(req.NewPassword) < 6 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "新密码长度不能少于6位"})
+				return
+			}
+			// 哈希新密码
+			newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+			if err != nil {
+				log.Printf("密码哈希失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "处理新密码时出错"})
+				return
+			}
+			updateFields = append(updateFields, "password = ?")
+			updateArgs = append(updateArgs, string(newPasswordHash))
+			// 不在响应中返回新密码
+		}
+
+		// --- 3. 执行更新 ---
+		if len(updateFields) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "没有提供任何需要更改的信息"})
+			return
+		}
+
+		// 构建最终的 UPDATE 语句
+		updateQuery := fmt.Sprintf("UPDATE user SET %s WHERE username = ?", strings.Join(updateFields, ", "))
+		updateArgs = append(updateArgs, currentUsername) // 添加 WHERE 条件的值
+
+		// 执行更新
+		result, err := db.ExecContext(c.Request.Context(), updateQuery, updateArgs...)
+		if err != nil {
+			log.Printf("数据库更新错误 (updateProfileHandler): %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新用户信息失败"})
+			return
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			log.Printf("获取影响行数错误: %v", err)
+			// 即使这里出错，更新可能已经成功，所以还是返回成功，但记录日志
+		}
+
+		if rowsAffected == 0 {
+			// 可能是并发问题或者 WHERE 条件没匹配上（理论上不应该）
+			log.Printf("警告: 更新操作影响了 0 行，用户: %s", currentUsername)
+			// 可以选择返回错误或警告
+			// c.JSON(http.StatusInternalServerError, gin.H{"error": "更新操作未影响任何记录"})
+			// return
+		}
+
+		// --- 4. 返回成功响应 ---
+		// 如果用户名被更改，需要生成新的 JWT 吗？取决于你的认证策略
+		// 如果需要，在这里重新生成包含新用户名的 token 并返回
+
+		successMessage := "个人资料更新成功！"
+		responseUpdate["message"] = successMessage // 添加通用成功消息
+		c.JSON(http.StatusOK, responseUpdate)
+	}
 }

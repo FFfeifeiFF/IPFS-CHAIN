@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './css/ArticleList.css';
 import { Download, Bell, User, Bookmark, Share2, Activity } from 'lucide-react'; // 引入更多图标
 import '../css/ArticleListDashboardLayout.css'; // <<< 使用新的 CSS 文件
 import { useNavigate } from 'react-router-dom';
+import { Modal } from 'antd';
 // 模拟获取文章风险等级和标签（实际应来自后端）
 const getArticleAttributes = (article) => {
   let riskLevel = 'low'; // 默认低风险
@@ -49,7 +49,16 @@ function ArticleListDashboardLayout({ username}) {
   const [userProfile, setUserProfile] = useState(null); // 存储 { username: '...', points: ... }
   const [profileLoading, setProfileLoading] = useState(true); // 资料加载状态
   const [profileError, setProfileError] = useState(null);   // 资料加载错误
+  const [visibleModal, setVisibleModal] = useState(false);
+  const [currentSummary, setCurrentSummary] = useState('');
 
+  
+  // 新增点击处理函数
+  const handleTitleClick = (e, summary) => {
+    e.preventDefault();
+    setCurrentSummary(summary || "暂无该文件的简介信息");
+    setVisibleModal(true);
+  };
       const navigate = useNavigate();
   // --- 获取文章列表的 Effect ---
   useEffect(() => {
@@ -320,6 +329,7 @@ function ArticleListDashboardLayout({ username}) {
     return { pointsDisplay: points, level: level, pointsClass: pointsClass };
   };
  const handleEditProfileClick = () => {
+    console.log(username);  
     navigate('/changeme',{ state: { username: username }}); // 导航到 /changeme 路由
   };
   // --- 渲染逻辑 ---
@@ -332,7 +342,7 @@ function ArticleListDashboardLayout({ username}) {
   for (let i = 1; i <= Math.ceil(totalCount / articlesPerPage); i++) {
     pageNumbers.push(i);
   }
-
+  //console.log("文章简介:", articles ? articles.map(a => ({id: a.id, title: a.title, summary: a.summary})) : "暂无数据");
   return (
     <div className="dashboard-layout">
       {/* 主内容区域 (文章列表) */}
@@ -357,8 +367,17 @@ function ArticleListDashboardLayout({ username}) {
                        {/* <Activity size={20} className="activity-icon" /> */}
                     </div>
                     <div className="card-content-layout">
-                        <h3 className="card-title-layout">
-                            <a href={`/article/${article.id}`} target="_blank" rel="noopener noreferrer">{article.title}</a>
+                    <h3 className="card-title-layout">
+                              <a 
+                                  href={`/article/${article.id}`} 
+                                  onClick={(e) => handleTitleClick(e, article.summary)}
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="article-title-link"
+                                  title="点击查看简介"
+                              >
+                                  {article.title || "未命名文件"}
+                              </a>
                         </h3>
                         <div className="card-meta-layout">
                             {/* 显示标签 */}
@@ -391,7 +410,19 @@ function ArticleListDashboardLayout({ username}) {
                 </div>
             ))}
         </div>
-
+        <Modal
+          title="文件简介"
+          visible={visibleModal}
+          onOk={() => setVisibleModal(false)}
+          onCancel={() => setVisibleModal(false)}
+          footer={null}
+          width={600}
+          centered
+        >
+          <div style={{ padding: '20px', maxHeight: '400px', overflowY: 'auto' }}>
+            <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{currentSummary}</p>
+          </div>
+        </Modal>
         {/* 分页 */}
         {totalCount > articlesPerPage && (
           <nav className="pagination-layout">
@@ -461,4 +492,3 @@ function ArticleListDashboardLayout({ username}) {
 }
 
 export default ArticleListDashboardLayout;
-

@@ -3,8 +3,9 @@ package template
 import (
 	"database/sql"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 检索到的数据库内容
@@ -55,7 +56,7 @@ func GetSearchsHandler(c *gin.Context) {
 	var searchResults []SearchResult
 	for rows.Next() {
 		var result SearchResult
-		if err := rows.Scan(&result.ID, &result.Title, &result.Author, &result.Date, &result.Summary); err != nil {
+		if err := rows.Scan(&result.ID, &result.Title, &result.Author, &result.Date, &result.Summary, &result.Points); err != nil {
 			fmt.Println("扫描数据错误:", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "处理搜索结果失败"})
 			return

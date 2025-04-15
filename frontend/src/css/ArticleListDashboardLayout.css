@@ -1,4 +1,37 @@
 /* src/css/ArticleListDashboardLayout.css */
+/* 文章标题链接的提示框样式 */
+.article-title-link {
+  position: relative;
+  cursor: pointer;
+}
+
+.article-title-link:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 100;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  width: 300px;
+  max-width: 100%;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1.4;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  white-space: normal;
+  word-wrap: break-word;
+  margin-top: 5px;
+  pointer-events: none; /* 确保提示框不会阻止其他鼠标事件 */
+}
+
+/* 确保提示框不会超出屏幕边界 */
+.article-title-link:hover::after {
+  max-height: 200px;
+  overflow-y: auto;
+}
 :root {
   --primary-color: #4a90e2; /* 主题蓝 */
   --border-color: #e4e7ed; /* 较浅的边框色 */

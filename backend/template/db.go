@@ -3,10 +3,11 @@ package template
 import (
 	"database/sql"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UploadRequest struct {
@@ -17,6 +18,7 @@ type UploadRequest struct {
 	Description string    `json:"description"`
 	TxHash      string    `json:"txHash"`
 	Points      int       `json:"points"`
+	FileType    string    `json:"fileType"`
 }
 
 func Db(c *gin.Context) {
@@ -43,7 +45,23 @@ func Db(c *gin.Context) {
 	}
 	fmt.Println("Successfully connected to MySQL!")
 	fmt.Println(req)
-	_, err = db.Exec("INSERT INTO message (user_id, message_name, date,hash,summary,points) VALUES (?,?,?, ?, ?,?)", req.Username, req.Filename, req.UploadDate, req.TxHash, req.Description, req.Points)
+
+	var userID int
+	err = db.QueryRow("SELECT id FROM user WHERE username = ?", req.Username).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("用户不存在:", req.Username)
+			c.JSON(http.StatusBadRequest, RegisterResponse{Success: false, Error: "用户不存在"})
+		} else {
+			fmt.Println("查询用户ID错误:", err)
+			c.JSON(http.StatusInternalServerError, RegisterResponse{Success: false, Error: "查询用户信息失败"})
+		}
+		return
+	}
+
+	fmt.Printf("找到用户ID: %d 对应用户名: %s\n", userID, req.Username)
+
+	_, err = db.Exec("INSERT INTO message (user_id, message_name, date,hash,summary,points,filetype) VALUES (?,?,?, ?,?, ?,?)", userID, req.Filename, req.UploadDate, req.TxHash, req.Description, req.Points, req.FileType)
 	if err != nil {
 		fmt.Println("数据库写入错误:", err)
 		c.JSON(http.StatusInternalServerError, RegisterResponse{Success: false, Error: "注册失败，数据库写入错误"})

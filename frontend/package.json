@@ -4,7 +4,10 @@
   "private": true,
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
-    "antd": "^5.24.6",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.0.2",
+    "antd": "^5.24.7",
     "cra-template": "1.2.0",
     "lucide-react": "^0.488.0",
     "react": "^18.2.0",

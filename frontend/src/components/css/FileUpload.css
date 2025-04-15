@@ -7,11 +7,38 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   background-color: #f9f9f9;
 }
+/* 添加到现有的CSS文件中 */
 
+.select-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+.checkbox-group label {
+  cursor: pointer;
+}
 .input-group {
   margin-bottom: 20px;
 }
-
+.file-type-hint {
+  font-size: 14px;
+  color: #6c757d;
+  margin-top: 5px;
+  margin-bottom: 0;
+}
 .label {
   display: block;
   margin-bottom: 5px;

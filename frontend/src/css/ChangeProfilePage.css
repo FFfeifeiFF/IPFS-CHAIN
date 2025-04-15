@@ -134,7 +134,12 @@
   width: 100%; /* 宽度占满 */
   box-sizing: border-box;
 }
-
+.password-mismatch {
+  color: #dc3545;
+  font-size: 0.85em;
+  margin-top: 5px;
+  margin-bottom: 0;
+}
 /* 提交按钮悬停样式 (非禁用时) */
 .submit-button:hover:not(:disabled) {
   background-color: #3a7ac8; /* 深一点的蓝色 */
@@ -147,17 +152,204 @@
   opacity: 0.7; /* 半透明 */
 }
 
-/* 取消/返回链接样式 */
-.cancel-link {
-  color: var(--text-secondary, #606266); /* 次要文字颜色 */
-  text-decoration: none; /* 无下划线 */
+/* src/css/ChangeProfilePage.css */
+:root {
+  /* 定义一些颜色变量，方便统一修改 */
+  --primary-color: #4a90e2;
+  --primary-hover-color: #3a7ac8;
+  --primary-disabled-color: #a0cfff;
+  --secondary-color: #6c757d; /* 添加次要按钮颜色变量 */
+  --secondary-hover-color: #5a6268;
+  --secondary-disabled-color: #adb5bd;
+  --risk-high-color: #f56c6c;
+  --success-color: #67c23a;
+  --text-color: #303133;
+  --text-secondary: #606266;
+  --text-placeholder: #909399;
+  --border-color: #dcdfe6;
+  --border-focus-color: var(--primary-color);
+  --border-focus-shadow: rgba(74, 144, 226, 0.2);
+  --card-bg: #ffffff;
+  --body-bg: #f0f2f5;
+  --input-disabled-bg: #f5f7fa;
+  --error-bg: #fef0f0;
+  --error-border: #fde2e2;
+  --success-bg: #f0f9eb;
+  --success-border: #e1f3d8;
+}
+
+
+.change-profile-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: calc(100vh - 80px);
+  padding: 40px 20px;
+  background-color: var(--body-bg);
+}
+
+.change-profile-card {
+  background-color: var(--card-bg);
+  padding: 30px 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 500px;
+  border: 1px solid var(--border-color);
+}
+
+.change-profile-card h2 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--text-color);
+  font-weight: 600;
+  font-size: 22px;
+}
+
+.current-user-info {
+    text-align: center;
+    margin-bottom: 25px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+.current-user-info strong {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text-secondary);
   font-size: 14px;
-  transition: color 0.2s; /* 颜色过渡 */
+}
+
+.form-group .required {
+    color: var(--risk-high-color);
+    margin-left: 4px; /* 稍微增加一点间距 */
+    font-weight: bold; /* 让星号更明显 */
+}
+
+/* --- 修改点: 合并 input 类型选择器 --- */
+.form-group input[type="text"],
+.form-group input[type="email"], /* 添加 email 类型 */
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s; /* 添加 box-shadow 过渡 */
+}
+
+/* --- 修改点: 合并 input:focus 类型选择器 --- */
+.form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus, /* 添加 email 类型 */
+.form-group input[type="password"]:focus {
+  border-color: var(--border-focus-color);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--border-focus-shadow);
+}
+
+.form-group input::placeholder {
+    color: var(--text-placeholder);
+    font-size: 13px;
+}
+
+/* 通用 input:disabled 样式，无需修改 */
+.form-group input:disabled {
+    background-color: var(--input-disabled-bg);
+    border-color: var(--border-color); /* 保持边框色 */
+    box-shadow: none; /* 禁用时移除阴影 */
+    cursor: not-allowed;
+}
+
+
+.error-message {
+  color: var(--risk-high-color);
+  background-color: var(--error-bg);
+  border: 1px solid var(--error-border);
+  padding: 10px 15px; /* 调整内边距 */
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 14px;
   text-align: center;
 }
 
-/* 取消/返回链接悬停样式 */
-.cancel-link:hover {
-  color: var(--primary-color, #4a90e2); /* 变蓝 */
-  text-decoration: underline; /* 加下划线 */
+.success-message {
+  color: var(--success-color);
+  background-color: var(--success-bg);
+  border: 1px solid var(--success-border);
+  padding: 10px 15px; /* 调整内边距 */
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
 }
+
+.form-actions {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column; /* 保持垂直排列 */
+  align-items: center;
+  gap: 15px; /* 按钮之间的间距 */
+}
+
+/* 基础按钮样式 (用于 .submit-button) */
+.submit-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 0.2s, opacity 0.2s;
+  width: 100%; /* 保持宽度占满 */
+  box-sizing: border-box;
+  text-align: center; /* 确保文字居中 */
+  text-decoration: none; /* 移除可能的下划线（如果之前是链接） */
+  display: inline-block; /* 使其表现像按钮 */
+}
+
+/* 主操作按钮悬停 (非禁用) */
+.submit-button:not(.secondary-action):hover:not(:disabled) {
+  background-color: var(--primary-hover-color);
+}
+
+/* 主操作按钮禁用 */
+.submit-button:not(.secondary-action):disabled {
+  background-color: var(--primary-disabled-color);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* --- 新增: 次要操作按钮 (返回按钮) 的特定样式 --- */
+/* 如果希望返回按钮有不同颜色 */
+.submit-button.secondary-action {
+  background-color: var(--secondary-color); /* 使用次要颜色 */
+}
+
+.submit-button.secondary-action:hover:not(:disabled) {
+  background-color: var(--secondary-hover-color); /* 次要悬停颜色 */
+}
+
+.submit-button.secondary-action:disabled {
+  background-color: var(--secondary-disabled-color); /* 次要禁用颜色 */
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* 移除旧的 .cancel-link 样式，因为它不再被使用 */
+/*
+.cancel-link { ... }
+.cancel-link:hover { ... }
+*/

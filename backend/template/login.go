@@ -3,9 +3,10 @@ package template
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-	"net/http"
 )
 
 // 定义前端接受前端数据的结构体

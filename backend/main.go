@@ -2,13 +2,14 @@ package main
 
 import (
 	"database/sql"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
 	"gotest/template"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var sseBroker *template.Broker
@@ -71,8 +72,9 @@ func main() {
 	r.PUT("/fileupdate/:articleId", template.UpdateArticleHandler)
 	r.GET("/subscribe/:username", template.SseSubscribeHandler(sseBroker))
 	r.GET("/profile", template.GetUserProfileHandler(db))
-	r.PUT("/changeprofile", template.ChangeProfile)
-	r.GET("/changeprofile", template.GetUserProfile)
+	r.GET("/changeprofile", template.GetProfileHandler)
+	r.PUT("/changeprofile", template.UpdateProfileHandler(db))
+	// r.PUT("/changeprofile", template.ChangeProfile) r.GET("/changeprofile", template.GetUserProfile)
 	// 启动 HTTP 服务，监听 8080 端口
 	r.Run(":8080")
 }
