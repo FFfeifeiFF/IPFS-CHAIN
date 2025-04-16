@@ -75,6 +75,23 @@ func main() {
 	r.GET("/changeprofile", template.GetProfileHandler)
 	r.PUT("/changeprofile", template.UpdateProfileHandler(db))
 	r.GET("/file-stats", template.GetFileStatsHandler(db))
+	r.GET("/friends", template.GetFriendsHandler(db))
+	r.GET("/friend-requests", template.GetFriendRequestsHandler(db))
+	r.GET("/friend-request-count", template.GetFriendRequestCountHandler(db))
+	r.GET("/users/search", template.SearchUsersHandler(db))
+	r.POST("/friend-requests", template.SendFriendRequestHandler(db))
+	r.PUT("/friend-requests/:requestId", template.RespondToFriendRequestHandler(db))
+	r.DELETE("/friend", template.DeleteFriendHandler(db))
+	
+	// 聊天相关API
+	r.GET("/messages", func(c *gin.Context) {
+		template.GetMessagesHandler(db)(c)
+	})
+	r.POST("/messages", func(c *gin.Context) {
+		template.SendMessageHandler(db)(c)
+	})
+	r.GET("/messages/unread", template.GetUnreadCountHandler(db))
+	r.GET("/ws/chat", template.HandleChatWebSocket(db))
 	
 	// 启动 HTTP 服务，监听 8080 端口
 	r.Run(":8080")

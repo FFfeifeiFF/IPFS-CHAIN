@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { Modal } from "antd";
 import { Pie, Doughnut } from "react-chartjs-2"; // 导入 Pie 和 Doughnut 组件
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js"; // 导入 Chart.js 相关组件
+import ShareDialog from './ShareDialog'; // 导入ShareDialog组件
 // 注册 Chart.js 组件
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -517,6 +518,58 @@ function ArticleListDashboardLayout({ username }) {
     navigate("/file-stats", { state: { username } });
   };
 
+  // 添加分享对话框状态
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedArticleForShare, setSelectedArticleForShare] = useState(null);
+  
+  // 全局WebSocket连接
+  useEffect(() => {
+    // 如果已经存在WebSocket连接，则不再创建
+    if (window.chatWebSocket) return;
+    
+    // 如果没有用户名，则不创建连接
+    if (!username) return;
+    
+    // 创建WebSocket连接并存储在window对象中，以便在整个应用程序中使用
+    const ws = new WebSocket(`ws://localhost:8080/ws/chat?username=${encodeURIComponent(username)}`);
+    window.chatWebSocket = ws;
+    
+    // 设置WebSocket事件处理
+    ws.onopen = () => {
+      console.log('全局WebSocket连接已建立');
+    };
+    
+    ws.onclose = () => {
+      console.log('全局WebSocket连接已关闭');
+      // 清除引用
+      window.chatWebSocket = null;
+    };
+    
+    ws.onerror = (error) => {
+      console.error('全局WebSocket错误:', error);
+    };
+    
+    // 组件卸载时关闭连接
+    return () => {
+      if (window.chatWebSocket) {
+        window.chatWebSocket.close();
+        window.chatWebSocket = null;
+      }
+    };
+  }, [username]);
+  
+  // 处理分享点击
+  const handleShareClick = (article) => {
+    setSelectedArticleForShare(article);
+    setShareDialogOpen(true);
+  };
+  
+  // 关闭分享对话框
+  const handleCloseShareDialog = () => {
+    setShareDialogOpen(false);
+    setSelectedArticleForShare(null);
+  };
+
   // --- 渲染逻辑 ---
   if (!username) {
     return (
@@ -599,7 +652,11 @@ function ArticleListDashboardLayout({ username }) {
         <button title="收藏" className="action-button">
           <Bookmark size={16} />
         </button>
-        <button title="分享" className="action-button">
+        <button 
+          title="分享" 
+          className="action-button"
+          onClick={() => handleShareClick(article)}
+        >
           <Share2 size={16} />
         </button>
       </div>
@@ -665,7 +722,11 @@ function ArticleListDashboardLayout({ username }) {
                             <button className="action-button" title="收藏">
                               <Bookmark size={16} />
                             </button>
-                            <button className="action-button" title="分享">
+                            <button 
+                              className="action-button" 
+                              title="分享"
+                              onClick={() => handleShareClick(article)}
+                            >
                               <Share2 size={16} />
                             </button>
                           </div>
@@ -753,7 +814,11 @@ function ArticleListDashboardLayout({ username }) {
                             <button className="action-button" title="收藏">
                               <Bookmark size={16} />
                             </button>
-                            <button className="action-button" title="分享">
+                            <button 
+                              className="action-button" 
+                              title="分享"
+                              onClick={() => handleShareClick(article)}
+                            >
                               <Share2 size={16} />
                             </button>
                           </div>
@@ -840,14 +905,18 @@ function ArticleListDashboardLayout({ username }) {
                             <button className="action-button" title="收藏">
                               <Bookmark size={16} />
                             </button>
-                            <button className="action-button" title="分享">
+                            <button 
+                              className="action-button" 
+                              title="分享"
+                              onClick={() => handleShareClick(article)}
+                            >
                               <Share2 size={16} />
-                        </button>
+                            </button>
                           </div>
-                    </div>
-                </div>
-            ))}
-        </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
                   {/* 中低危情报分页 */}
                   {mediumLowRiskArticles.length > mediumLowRiskItemsPerPage && (
@@ -1020,6 +1089,15 @@ function ArticleListDashboardLayout({ username }) {
           </div>
         </div>
       </div>
+
+      {/* 在return的最后添加ShareDialog组件 */}
+      {shareDialogOpen && selectedArticleForShare && (
+        <ShareDialog
+          username={username}
+          article={selectedArticleForShare}
+          onClose={handleCloseShareDialog}
+        />
+      )}
     </div>
   );
 }

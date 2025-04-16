@@ -2,10 +2,12 @@ import React,{ useState, useRef, useEffect } from 'react';
 import { UserPlus } from 'lucide-react'; // 引入好友图标
 import './css/Header.css';
 import { Link,useNavigate, useLocation } from 'react-router-dom'; // 引入 useLocation
+import FriendPopup from './FriendPopup'; // 好友弹窗组件
 
 function Head(props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFriendPopup, setShowFriendPopup] = useState(false);
+  const [requestCount, setRequestCount] = useState(0);
   const friendPopupRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation(); // 获取当前 location 对象
@@ -30,6 +32,34 @@ function Head(props) {
   const toggleFriendPopup = () => {
     setShowFriendPopup(!showFriendPopup);
   };
+
+  // 获取好友请求数量
+  const fetchFriendRequestCount = async () => {
+    if (!props.username) return;
+    
+    try {
+      const response = await fetch(`http://localhost:8080/friend-request-count?username=${encodeURIComponent(props.username)}`);
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      setRequestCount(data.count || 0);
+    } catch (error) {
+      console.error('获取好友请求数量错误:', error);
+    }
+  };
+
+  // 初始加载和定时刷新请求数量
+  useEffect(() => {
+    if (props.username) {
+      fetchFriendRequestCount();
+      
+      // 设置定时器，每分钟刷新一次
+      const timer = setInterval(fetchFriendRequestCount, 60000);
+      
+      return () => clearInterval(timer);
+    }
+  }, [props.username]);
 
   // 点击外部关闭好友弹窗
   useEffect(() => {
@@ -73,6 +103,21 @@ function Head(props) {
           />
           <button onClick={handleSearchClick}>搜索</button>
         </div>
+        {props.username && (
+          <div className="friend-icon-container" ref={friendPopupRef}>
+            <button 
+              className={`friend-icon-button ${requestCount > 0 ? 'has-notification' : ''}`}
+              onClick={toggleFriendPopup}
+              title="我的好友"
+            >
+              <UserPlus size={20} />
+              {requestCount > 0 && <span className="notification-badge">{requestCount}</span>}
+            </button>
+            {showFriendPopup && (
+              <FriendPopup username={props.username} onClose={() => setShowFriendPopup(false)} />
+            )}
+          </div>
+        )}
       </div>
     </header>
   );
