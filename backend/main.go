@@ -74,7 +74,8 @@ func main() {
 	r.GET("/profile", template.GetUserProfileHandler(db))
 	r.GET("/changeprofile", template.GetProfileHandler)
 	r.PUT("/changeprofile", template.UpdateProfileHandler(db))
-	// r.PUT("/changeprofile", template.ChangeProfile) r.GET("/changeprofile", template.GetUserProfile)
+	r.GET("/file-stats", template.GetFileStatsHandler(db))
+	
 	// 启动 HTTP 服务，监听 8080 端口
 	r.Run(":8080")
 }

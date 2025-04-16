@@ -17,7 +17,7 @@
                 <Head username={username}/>
                 <div className="content-area">
                     <SearchResults2/>
-                       <Sidebar2 username={username} />
+                       {/* <Sidebar2 username={username} /> */}
                 </div>
                 <Footer/>
             </div>

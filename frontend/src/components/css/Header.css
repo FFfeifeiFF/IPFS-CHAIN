@@ -1,55 +1,102 @@
 .header {
-  background-color: #fff;
-  padding: 15px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  padding: 15px 20px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 30px;
 }
 
 .logo {
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: bold;
-  color: #333;
+  color: #4a6fa5;
+  margin-right: 30px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.logo:hover {
+  color: #2c4870;
+  text-decoration: none;
+}
+
+.navigation {
+  display: flex;
+  gap: 20px;
 }
 
 .navigation a {
-  margin-right: 15px;
+  color: #333;
   text-decoration: none;
-  color: #555;
-  font-weight: bold;
+  padding: 5px 0;
+  position: relative;
+  transition: color 0.2s;
 }
 
 .navigation a:hover {
-  color: #007bff;
+  color: #4a6fa5;
+}
+
+.navigation a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #4a6fa5;
+  transition: width 0.3s;
+}
+
+.navigation a:hover::after {
+  width: 100%;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 15px;
 }
 
-.search-bar input[type="text"] {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.search-bar {
+  display: flex;
+  align-items: center;
+}
+
+.search-bar input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px 0 0 4px;
+  font-size: 14px;
+  outline: none;
+  min-width: 200px;
+}
+
+.search-bar input:focus {
+  border-color: #4a6fa5;
 }
 
 .search-bar button {
-  padding: 8px 12px;
-  background-color: #007bff;
-  color: #fff;
+  padding: 8px 16px;
+  background-color: #4a6fa5;
+  color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 0 4px 4px 0;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-bar button:hover {
+  background-color: #385d8a;
 }
 
 .user-actions button {
@@ -60,4 +107,61 @@
   border-radius: 4px;
   cursor: pointer;
   margin-left: 10px;
+}
+
+/* 好友图标样式 */
+.friend-icon-container {
+  position: relative;
+}
+
+.friend-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background-color: #f5f5f5;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.friend-icon-button:hover {
+  background-color: #e0e0e0;
+}
+
+.friend-icon-button.has-notification::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background-color: #ff4d4f;
+  border-radius: 50%;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    padding: 10px;
+  }
+  
+  .header-left, .header-right {
+    width: 100%;
+  }
+  
+  .header-left {
+    margin-bottom: 10px;
+  }
+  
+  .navigation {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .search-bar input {
+    min-width: 150px;
+  }
 }

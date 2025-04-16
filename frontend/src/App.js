@@ -9,6 +9,7 @@ import Departlist from './pages/depart_list'
 import Fileupload from "./pages/Fileupload";
 import FileManager from "./pages/myfile";
 import ChangeProfilePage from "./pages/ChangeProfilePage";
+import FileStats from "./components/FileStats";
 function App() {
   return (
     <div className="App">
@@ -22,7 +23,8 @@ function App() {
           <Route path="/depart_list" element={<Departlist/>} /> {}
           <Route path="/fileupload" element={<Fileupload/>} /> {}
           <Route path="/myfile" element={<FileManager/>} />{}
-          <Route path="/changeme" element={<ChangeProfilePage/>}/>{}
+          <Route path="/changeprofile" element={<ChangeProfilePage/>}/>{}
+          <Route path="/file-stats" element={<FileStats/>}/>{}
       </Routes>
     </div>
   );

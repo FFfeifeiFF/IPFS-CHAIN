@@ -116,6 +116,7 @@ func AuthMiddleware() gin.HandlerFunc {
 func GetProfileHandler(c *gin.Context) {
 	initDB()
 	targetUsername := c.Query("username")
+	fmt.Println(targetUsername,111)
 	fmt.Println(targetUsername)
 	if targetUsername == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 username 查询参数"})
@@ -138,7 +139,7 @@ func GetProfileHandler(c *gin.Context) {
 
 	// 返回从数据库获取的用户名和邮箱
 	c.JSON(http.StatusOK, gin.H{
-		"username": targetUsername, // 从查询参数获取，因为我们只查了 email
+		"username": targetUsername,
 		"email":    email,
 	})
 }
@@ -223,7 +224,7 @@ func UpdateProfileHandler(db *sql.DB) gin.HandlerFunc {
 
 			// 检查新邮箱是否已被占用
 			var existsCount int
-			checkQuery := "SELECT COUNT(*) FROM user WHERE email = ? AND username != ?" // 排除自己
+			checkQuery := "SELECT COUNT(*) FROM user WHERE emile = ? AND username != ?" // 排除自己
 			err = db.QueryRowContext(c.Request.Context(), checkQuery, req.NewEmail, currentUsername).Scan(&existsCount)
 			if err != nil {
 				log.Printf("数据库查询错误 (updateProfileHandler - check email): %v", err)

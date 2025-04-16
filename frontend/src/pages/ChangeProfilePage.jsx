@@ -8,9 +8,11 @@ function ChangeProfilePage() {
   const location = useLocation(); // 获取 location 对象 
   const navigate = useNavigate();
   const username = location.state?.username || '默认用户名';
+  console.log('ChangeProfilePage mounted with username:', username);
+  console.log('Location state:', location.state);
 
   // 状态：存储从后端获取的当前用户信息
-  const [currentUser, setCurrentUser] = useState({ username: '', email: '' });
+  const [currentUser, setCurrentUser] = useState({ username: `${username}`, email: 'email' });
   // 状态：标记是否正在从后端加载用户信息
   const [isFetchingProfile, setIsFetchingProfile] = useState(true);
 
@@ -30,27 +32,19 @@ function ChangeProfilePage() {
 
   // --- 组件挂载时，从后端获取当前用户信息 ---
   useEffect(() => {
+    console.log('Fetching profile for username:', username);
     const fetchUserProfile = async () => {
       setIsFetchingProfile(true);
-      setError(null); // 清除之前的错误
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        setError('认证信息丢失，请重新登录。');
-        setIsFetchingProfile(false);
-        // navigate('/login'); // 可选：导航到登录页
-        return;
-      }
+      setError(null); // 清除之前的错误 
 
       try {
+        console.log('Making request to:', `http://localhost:8080/changeprofile?username=${encodeURIComponent(username)}`);
         // 假设获取用户信息的接口是 GET /user/profile
         const response = await fetch(`http://localhost:8080/changeprofile?username=${encodeURIComponent(username)}`, {
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
         });
         const data = await response.json();
-
+        console.log('Response data:', data);
         if (!response.ok) {
           throw new Error(data.error || `获取用户信息失败 (${response.status})`);
         }
@@ -68,9 +62,10 @@ function ChangeProfilePage() {
       }
     };
 
-    fetchUserProfile();
-     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 空依赖数组确保只在挂载时运行一次
+    if (username) {
+      fetchUserProfile();
+    }
+  }, [username, location.state]); // 添加 username 和 location.state 作为依赖
 
 
   // --- 处理表单输入变化 ---
@@ -144,20 +139,12 @@ function ChangeProfilePage() {
     }
 
     try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            setError('认证信息丢失，请重新登录。');
-            setIsLoading(false);
-            return;
-        }
-
         // 注意：这里的 URL 是你原来代码中的 /changeprofile
         // 确认后端更新接口是否就是这个路径，通常建议使用 /user/profile/update 或类似RESTful路径
         const response = await fetch(`http://localhost:8080/changeprofile?username=${encodeURIComponent(username)}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify(requestBody),
         });

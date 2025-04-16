@@ -1,8 +1,37 @@
 body {
-  font-family: sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f4f4f4;
+  font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f5f7fa;
+  color: #333;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-container {
+  flex: 1;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+/* 确保页脚在底部 */
+footer {
+  margin-top: auto;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .main-container {
+    padding: 0 10px;
+  }
 }
 
 .container {
