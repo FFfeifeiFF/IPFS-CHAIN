@@ -702,3 +702,13 @@ body {
   background-color: #f0f5ff;
   text-decoration: underline;
 }
+
+/* 添加收藏按钮样式 */
+.action-button.favorited {
+  color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.action-button.favorited:hover {
+  background-color: rgba(245, 158, 11, 0.2);
+}

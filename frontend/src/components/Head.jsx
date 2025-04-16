@@ -90,6 +90,9 @@ function Head(props) {
           <Link to={"/file-stats"} state={{username:props.username}}>
           文件统计
             </Link>
+          <Link to={"/my-favorites"} state={{username:props.username}}>
+          我的收藏
+            </Link>
           {/* 添加更多导航链接 */}
         </div>
       </div>

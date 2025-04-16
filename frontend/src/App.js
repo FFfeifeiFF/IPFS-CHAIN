@@ -10,6 +10,8 @@ import Fileupload from "./pages/Fileupload";
 import FileManager from "./pages/myfile";
 import ChangeProfilePage from "./pages/ChangeProfilePage";
 import FileStats from "./components/FileStats";
+import MyFavorites from "./pages/MyFavorites";
+
 function App() {
   return (
     <div className="App">
@@ -25,6 +27,7 @@ function App() {
           <Route path="/myfile" element={<FileManager/>} />{}
           <Route path="/changeprofile" element={<ChangeProfilePage/>}/>{}
           <Route path="/file-stats" element={<FileStats/>}/>{}
+          <Route path="/my-favorites" element={<MyFavorites/>}/>{}
       </Routes>
     </div>
   );

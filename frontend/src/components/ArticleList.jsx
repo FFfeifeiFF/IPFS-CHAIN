@@ -570,6 +570,100 @@ function ArticleListDashboardLayout({ username }) {
     setSelectedArticleForShare(null);
   };
 
+  // 在已有的state变量之后添加收藏状态的存储
+  const [favoriteStatus, setFavoriteStatus] = useState({}); // 存储每篇文章的收藏状态
+  const [isToggleFavorite, setIsToggleFavorite] = useState(false); // 收藏操作中状态
+
+  // 在其他useEffect之后添加检查收藏状态的Effect
+  useEffect(() => {
+    // 如果没有文章数据或用户名，不需要检查
+    if (!articles || !username) return;
+    
+    // 批量检查文章的收藏状态
+    const checkFavoriteStatus = async () => {
+      const articleIds = articles.map(article => article.id);
+      
+      try {
+        // 逐个检查文章是否被收藏
+        const statusMap = {};
+        
+        for (const articleId of articleIds) {
+          const response = await fetch(`http://localhost:8080/favorites/check?username=${encodeURIComponent(username)}&articleId=${articleId}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            statusMap[articleId] = data.isFavorited;
+          }
+        }
+        
+        setFavoriteStatus(statusMap);
+      } catch (error) {
+        console.error('检查收藏状态失败:', error);
+      }
+    };
+    
+    checkFavoriteStatus();
+  }, [articles, username]);
+
+  // 在其他函数之后添加处理收藏的函数
+  const handleFavoriteClick = async (article) => {
+    if (!username) {
+      alert('请先登录');
+      return;
+    }
+    
+    // 防止重复点击
+    if (isToggleFavorite) return;
+    
+    setIsToggleFavorite(true);
+    
+    try {
+      const currentStatus = favoriteStatus[article.id] || false;
+      const url = 'http://localhost:8080/favorites';
+      const method = currentStatus ? 'DELETE' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username,
+          articleId: article.id,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        // 已经收藏的情况是正常的，不需要弹出错误
+        if (errorData.alreadyFavorited) {
+          alert('此文章已收藏');
+          return;
+        }
+        
+        throw new Error(errorData.error || '操作失败');
+      }
+      
+      const data = await response.json();
+      
+      // 更新状态
+      setFavoriteStatus(prev => ({
+        ...prev,
+        [article.id]: data.isFavorited,
+      }));
+      
+      // 显示操作结果
+      alert(currentStatus ? '已取消收藏' : '收藏成功');
+      
+    } catch (error) {
+      console.error('收藏操作失败:', error);
+      alert(`操作失败: ${error.message || '未知错误'}`);
+    } finally {
+      setIsToggleFavorite(false);
+    }
+  };
+
   // --- 渲染逻辑 ---
   if (!username) {
     return (
@@ -649,7 +743,11 @@ function ArticleListDashboardLayout({ username }) {
             <Download size={16} />
           )}
         </button>
-        <button title="收藏" className="action-button">
+        <button 
+          title={favoriteStatus[article.id] ? "取消收藏" : "收藏"} 
+          className={`action-button ${favoriteStatus[article.id] ? "favorited" : ""}`}
+          onClick={() => handleFavoriteClick(article)}
+        >
           <Bookmark size={16} />
         </button>
         <button 
@@ -719,7 +817,11 @@ function ArticleListDashboardLayout({ username }) {
                             >
                               <Download size={16} />
                             </button>
-                            <button className="action-button" title="收藏">
+                            <button 
+                              className="action-button" 
+                              title={favoriteStatus[article.id] ? "取消收藏" : "收藏"}
+                              onClick={() => handleFavoriteClick(article)}
+                            >
                               <Bookmark size={16} />
                             </button>
                             <button 
@@ -811,7 +913,11 @@ function ArticleListDashboardLayout({ username }) {
                             >
                               <Download size={16} />
                             </button>
-                            <button className="action-button" title="收藏">
+                            <button 
+                              className="action-button" 
+                              title={favoriteStatus[article.id] ? "取消收藏" : "收藏"}
+                              onClick={() => handleFavoriteClick(article)}
+                            >
                               <Bookmark size={16} />
                             </button>
                             <button 
@@ -902,7 +1008,11 @@ function ArticleListDashboardLayout({ username }) {
                             >
                               <Download size={16} />
                             </button>
-                            <button className="action-button" title="收藏">
+                            <button 
+                              className="action-button" 
+                              title={favoriteStatus[article.id] ? "取消收藏" : "收藏"}
+                              onClick={() => handleFavoriteClick(article)}
+                            >
                               <Bookmark size={16} />
                             </button>
                             <button 

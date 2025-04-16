@@ -75,6 +75,7 @@ func main() {
 	r.GET("/changeprofile", template.GetProfileHandler)
 	r.PUT("/changeprofile", template.UpdateProfileHandler(db))
 	r.GET("/file-stats", template.GetFileStatsHandler(db))
+	//好友相关API
 	r.GET("/friends", template.GetFriendsHandler(db))
 	r.GET("/friend-requests", template.GetFriendRequestsHandler(db))
 	r.GET("/friend-request-count", template.GetFriendRequestCountHandler(db))
@@ -92,6 +93,12 @@ func main() {
 	})
 	r.GET("/messages/unread", template.GetUnreadCountHandler(db))
 	r.GET("/ws/chat", template.HandleChatWebSocket(db))
+	
+	// 收藏相关API
+	r.POST("/favorites", template.AddFavoriteHandler(db))
+	r.DELETE("/favorites", template.RemoveFavoriteHandler(db))
+	r.GET("/favorites/check", template.CheckFavoriteHandler(db))
+	r.GET("/favorites", template.GetUserFavoritesHandler(db))
 	
 	// 启动 HTTP 服务，监听 8080 端口
 	r.Run(":8080")
