@@ -38,8 +38,9 @@ function Head(props) {
     if (!props.username) return;
     
     try {
-      const response = await fetch(`http://localhost:8080/friend-request-count?username=${encodeURIComponent(props.username)}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/friend-request-count?username=${encodeURIComponent(props.username)}`);
       if (!response.ok) {
+        console.error('获取好友请求数量失败');
         return;
       }
       const data = await response.json();

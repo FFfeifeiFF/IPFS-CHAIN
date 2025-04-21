@@ -28,7 +28,8 @@ func GetSearchsHandler(c *gin.Context) {
 	}
 
 	// 连接数据库
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库连接失败"})

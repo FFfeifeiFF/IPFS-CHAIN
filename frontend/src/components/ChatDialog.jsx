@@ -16,7 +16,10 @@ const ChatDialog = ({ username, friend, onClose }) => {
     if (!username) return;
     
     // 创建WebSocket连接
-    const ws = new WebSocket(`ws://localhost:8080/ws/chat?username=${encodeURIComponent(username)}`);
+    const apiUrl = process.env.REACT_APP_API_URL; 
+    const wsUrlBase = apiUrl.replace(/^http/, 'ws');
+    const wsUrl = `${wsUrlBase}/ws/chat?username=${encodeURIComponent(username)}`;
+    const ws = new WebSocket(wsUrl); 
     webSocketRef.current = ws;
     
     // 连接建立时
@@ -74,7 +77,7 @@ const ChatDialog = ({ username, friend, onClose }) => {
       setTimeout(() => {
         if (webSocketRef.current?.readyState === WebSocket.CLOSED) {
           console.log('尝试重新连接WebSocket...');
-          const newWs = new WebSocket(`ws://localhost:8080/ws/chat?username=${encodeURIComponent(username)}`);
+          const newWs = new WebSocket(wsUrl);
           webSocketRef.current = newWs;
           
           // 为新的WebSocket连接配置事件处理
@@ -108,12 +111,11 @@ const ChatDialog = ({ username, friend, onClose }) => {
   // 获取历史消息
   useEffect(() => {
     const fetchMessages = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const response = await fetch(`http://localhost:8080/messages?username=${encodeURIComponent(username)}&friendUsername=${encodeURIComponent(friend.username)}`);
-        
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/messages?username=${encodeURIComponent(username)}&friendUsername=${encodeURIComponent(friend.username)}`);
         if (!response.ok) {
-          throw new Error('获取消息失败');
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();

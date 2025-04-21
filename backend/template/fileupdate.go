@@ -30,8 +30,8 @@ type UpdateArticlePayload struct {
 }
 
 // --- 数据库 DSN ---
-const dsn = "root:123456@tcp(127.0.0.1:3307)/golan?parseTime=true"
-
+//const dsn = "root:123456@tcp(127.0.0.1:3307)/golan?parseTime=true"
+const dsn = "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 // --- 辅助函数：根据用户名获取用户 ID ---
 func getUserIdByUsername(db *sql.DB, ctx context.Context, username string) (int, error) {
 	var userId int
@@ -179,7 +179,8 @@ func FileUpdate(c *gin.Context) { // Encapsulate in a handler function
 		return
 	}
 	// 连接数据库
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan?parseTime=true" // Added parseTime=true for time.Time scanning
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan?parseTime=true" // Added parseTime=true for time.Time scanning
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		fmt.Println("数据库连接失败:", err) // Log error server-side
@@ -282,7 +283,8 @@ func DeleteArticleHandler(c *gin.Context) { // 处理 DELETE /fileupdate/:articl
 	operationUsername := c.Query("username")
 
 	// 2. 连接数据库
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan?parseTime=true"
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan?parseTime=true"
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err := sql.Open("mysql", dsn) // 使用相同的 dsn
 	if err != nil {
 		fmt.Println("数据库连接失败:", err)                                      // 服务端记录日志
@@ -374,7 +376,8 @@ func UpdateArticleHandler(c *gin.Context) {
 	}
 	operationUsername := payload.Username
 	// 3. 连接数据库
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan?parseTime=true"
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan?parseTime=true"
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		fmt.Println("数据库连接失败:", err)

@@ -17,12 +17,12 @@ const ShareDialog = ({ username, article, onClose }) => {
       if (!username) return;
       
       setLoading(true);
-      setError(null);
+      setError('');
       
       try {
-        const response = await fetch(`http://localhost:8080/friends?username=${encodeURIComponent(username)}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/friends?username=${encodeURIComponent(username)}`);
         if (!response.ok) {
-          throw new Error('获取好友列表失败');
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
@@ -81,7 +81,7 @@ const ShareDialog = ({ username, article, onClose }) => {
         }, 3000);
       } else {
         // 如果WebSocket未连接，则使用HTTP API发送
-        const response = await fetch('http://localhost:8080/messages', {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

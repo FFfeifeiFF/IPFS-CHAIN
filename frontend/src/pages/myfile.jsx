@@ -41,10 +41,8 @@ const FileManager = () => {
     setError(null);
     console.log(`Fetching page: ${currentPage}, size: ${pageSize}, search: ${searchText}, user: ${username}`); // Debug log
     try {
-      const response = await fetch(
-        // Ensure URL includes all necessary params used by the backend
-        `http://localhost:8080/fileupdate?page=${currentPage}&pageSize=${pageSize}&username=${encodeURIComponent(username)}&search=${encodeURIComponent(searchText)}`
-      );
+      const apiUrl = `${process.env.REACT_APP_API_URL}/fileupdate?page=${currentPage}&pageSize=${pageSize}&username=${encodeURIComponent(username)}&search=${encodeURIComponent(searchText)}`
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         let errorMsg = `HTTP error! status: ${response.status}`;
         try {
@@ -109,8 +107,7 @@ const FileManager = () => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          // --- 修改 DELETE 请求 URL，添加 username 作为查询参数 ---
-          const response = await fetch(`http://localhost:8080/fileupdate/${articleId}?username=${encodeURIComponent(username)}`, {
+          const response = await fetch(`${process.env.REACT_APP_API_URL}/fileupdate/${articleId}?username=${encodeURIComponent(username)}`, {
             method: 'DELETE',
             headers: {
               // DELETE 通常不需要 Content-Type，除非你发送了 body (不推荐)
@@ -181,7 +178,9 @@ const FileManager = () => {
         username: username, // 将 username 添加到请求体中
       };
 
-      const response = await fetch(`http://localhost:8080/fileupdate/${editingArticle.id}`, {
+      // 使用新的 API 端点和 PUT 方法
+      console.log("Updating article with ID:", editingArticle.id);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/fileupdate/${editingArticle.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

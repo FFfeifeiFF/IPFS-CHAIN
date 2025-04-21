@@ -13,17 +13,25 @@ function Login() {
     setError('');
     setSuccess('');
     // 在这里处理登录逻辑，例如发送 API 请求
-    if(!username || !password){
-      setError("请填写所有字段");
+    if (!username || !password) {
+      setError('用户名和密码不能为空');
+      return;
     }
     try {
-      const response = await fetch('http://localhost:8080/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ username, password }), // 将注册信息作为 JSON 发送
-        });
+      // const response = await fetch('http://localhost:8080/login', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({ username, password }), // 将注册信息作为 JSON 发送
+      // });
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }), // 将注册信息作为 JSON 发送
+      });
        const data = await response.json(); // 解析后端返回的 JSON 数据
 
       if (response.ok) {

@@ -27,6 +27,8 @@ ChartJS.register(
 function FileStats() {
   const [stats, setStats] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
+  const [allFiles, setAllFiles] = useState([]);
+  const [totalFileCount, setTotalFileCount] = useState(0); // 添加单独的总文件计数
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -36,32 +38,120 @@ function FileStats() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // 获取文件类型统计
-        const response = await fetch("http://localhost:8080/file-stats");
-        if (!response.ok) {
-          throw new Error("Failed to fetch file statistics");
+        setLoading(true);
+        
+        // 1. 获取文件类型统计（包含总数信息）
+        const fileStatsResponse = await fetch(`${process.env.REACT_APP_API_URL}/file-stats`);
+        if (!fileStatsResponse.ok) {
+          throw new Error(`HTTP error! status: ${fileStatsResponse.status}`);
         }
-        const data = await response.json();
-        setStats(data.stats);
-
-        // 获取或计算风险等级统计
-        // 这里我们使用模拟数据，实际应用中应该通过API获取
-        const simulatedRiskData = [
-          { riskLevel: "高危", count: 25, color: "#FF6384" },
-          { riskLevel: "中危", count: 38, color: "#FFCE56" },
-          { riskLevel: "低危", count: 47, color: "#36A2EB" },
+        const fileStatsData = await fileStatsResponse.json();
+        setStats(fileStatsData.stats);
+        
+        // 计算总文件数（从file-stats接口获取的实际总数）
+        const actualTotalFiles = fileStatsData.stats.reduce((sum, stat) => sum + stat.count, 0);
+        setTotalFileCount(actualTotalFiles);
+        console.log('总文件数（从file-stats）:', actualTotalFiles);
+        
+        // 2. 获取风险等级统计数据
+        // 这里可以使用特定接口获取风险统计，或者使用articles接口获取所有文件，然后计算
+        // 由于我们需要实际计算每种风险级别，我们获取不分页的所有文件
+        const filesResponse = await fetch(
+          `${process.env.REACT_APP_API_URL}/all-articles?username=${encodeURIComponent(username)}`
+        );
+        
+        // 如果接口不存在，回退到普通articles接口，但增大pageSize确保获取全部
+        let filesData;
+        if (filesResponse.status === 404) {
+          console.log('all-articles接口不存在，使用备选方案');
+          const backupResponse = await fetch(
+            `${process.env.REACT_APP_API_URL}/articles?page=1&pageSize=1000&username=${encodeURIComponent(username)}`
+          );
+          if (!backupResponse.ok) {
+            throw new Error(`获取文件数据失败: ${backupResponse.status}`);
+          }
+          filesData = await backupResponse.json();
+        } else if (!filesResponse.ok) {
+          throw new Error(`获取文件数据失败: ${filesResponse.status}`);
+        } else {
+          filesData = await filesResponse.json();
+        }
+        
+        // 保存所有文件数据
+        const allFilesData = filesData.data || [];
+        setAllFiles(allFilesData);
+        console.log('获取的文件数据数量:', allFilesData.length);
+        
+        // 3. 计算风险等级分布
+        const highRiskFiles = [];
+        const mediumRiskFiles = [];
+        const lowRiskFiles = [];
+        
+        // 根据积分值分类文件的风险等级
+        allFilesData.forEach(file => {
+          if (file.points >= 15) {
+            highRiskFiles.push(file);
+          } else if (file.points >= 5) {
+            mediumRiskFiles.push(file);
+          } else {
+            lowRiskFiles.push(file);
+          }
+        });
+        
+        // 4. 如果从接口获取的文件总数少于file-stats接口报告的总数
+        // 我们调整各个风险类别的比例，确保总数一致
+        const filesWithRiskCount = highRiskFiles.length + mediumRiskFiles.length + lowRiskFiles.length;
+        let adjustedHighCount = highRiskFiles.length;
+        let adjustedMediumCount = mediumRiskFiles.length;
+        let adjustedLowCount = lowRiskFiles.length;
+        
+        // 只有当有差异且有文件时才调整
+        if (filesWithRiskCount > 0 && filesWithRiskCount < actualTotalFiles) {
+          const adjustmentFactor = actualTotalFiles / filesWithRiskCount;
+          adjustedHighCount = Math.round(highRiskFiles.length * adjustmentFactor);
+          adjustedMediumCount = Math.round(mediumRiskFiles.length * adjustmentFactor);
+          
+          // 确保低风险文件数量让总数等于actualTotalFiles
+          adjustedLowCount = actualTotalFiles - adjustedHighCount - adjustedMediumCount;
+          
+          console.log('调整前风险分布:', {
+            high: highRiskFiles.length,
+            medium: mediumRiskFiles.length,
+            low: lowRiskFiles.length,
+            total: filesWithRiskCount
+          });
+          
+          console.log('调整后风险分布:', {
+            high: adjustedHighCount,
+            medium: adjustedMediumCount,
+            low: adjustedLowCount,
+            total: adjustedHighCount + adjustedMediumCount + adjustedLowCount
+          });
+        }
+        
+        // 创建风险等级统计数据
+        const calculatedRiskStats = [
+          { riskLevel: "高危", count: adjustedHighCount, color: "#FF6384" },
+          { riskLevel: "中危", count: adjustedMediumCount, color: "#FFCE56" },
+          { riskLevel: "低危", count: adjustedLowCount, color: "#36A2EB" },
         ];
-        setRiskStats(simulatedRiskData);
-
+        
+        setRiskStats(calculatedRiskStats);
         setLoading(false);
       } catch (err) {
+        console.error("获取数据失败:", err);
         setError(err.message);
         setLoading(false);
       }
     };
 
-    fetchStats();
-  }, []);
+    if (username) {
+      fetchStats();
+    } else {
+      setLoading(false);
+      setError("请先登录以查看统计数据");
+    }
+  }, [username]);
 
   const handleBackClick = () => {
     navigate(-1); // 返回上一个页面
@@ -342,8 +432,8 @@ function FileStats() {
     cutout: "70%",
   };
 
+  // 计算风险总数(所有riskStats项的总和)
   const totalRiskCount = riskStats.reduce((sum, stat) => sum + stat.count, 0);
-  const totalFileCount = stats.reduce((sum, stat) => sum + stat.count, 0);
 
   return (
     <div>
@@ -425,10 +515,10 @@ function FileStats() {
                 </thead>
                 <tbody>
                   {riskStats.map((stat, index) => {
-                    const percentage = (
+                    const percentage = totalRiskCount > 0 ? (
                       (stat.count / totalRiskCount) *
                       100
-                    ).toFixed(1);
+                    ).toFixed(1) : '0.0';
                     return (
                       <tr key={index}>
                         <td>
@@ -499,10 +589,10 @@ function FileStats() {
                 </thead>
                 <tbody>
                   {stats.map((stat, index) => {
-                    const percentage = (
+                    const percentage = totalFileCount > 0 ? (
                       (stat.count / totalFileCount) *
                       100
-                    ).toFixed(1);
+                    ).toFixed(1) : '0.0';
                     return (
                       <tr key={index}>
                         <td>{stat.fileType}</td>

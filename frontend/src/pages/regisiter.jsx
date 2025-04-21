@@ -25,14 +25,21 @@ function Register() {
       return;
     }
 
-    // 在这里处理注册逻辑，例如发送 API 请求
+    // 简单验证（可选，但推荐）
+    if (!email.includes('@')) {
+      setError('请输入有效的邮箱地址');
+      return;
+    }
+
+    const dataToSend = { username, email, password };
+
     try {
-      const response = await fetch('http://localhost:8080/register', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, email, password }), // 将注册信息作为 JSON 发送
+        body: JSON.stringify(dataToSend), // 将注册信息作为 JSON 发送
       });
 
       const data = await response.json(); // 解析后端返回的 JSON 数据

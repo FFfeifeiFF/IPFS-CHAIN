@@ -30,10 +30,10 @@ const MyFavorites = () => {
       setError(null);
       
       try {
-        const response = await fetch(`http://localhost:8080/favorites?username=${encodeURIComponent(username)}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/favorites?username=${encodeURIComponent(username)}`);
         
         if (!response.ok) {
-          throw new Error(`获取收藏失败: ${response.status}`);
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
@@ -60,7 +60,7 @@ const MyFavorites = () => {
     try {
       // 步骤 1: 检查积分
       const checkResponse = await fetch(
-        `http://localhost:8080/download?id=${articleId}&username=${encodeURIComponent(
+        `${process.env.REACT_APP_API_URL}/download?id=${articleId}&username=${encodeURIComponent(
           username
         )}&check=true`,
         { method: "POST" }
@@ -79,7 +79,7 @@ const MyFavorites = () => {
       }
 
       // 步骤 2: 执行下载
-      const downloadApiUrl = `http://localhost:8080/download?id=${articleId}&username=${encodeURIComponent(
+      const downloadApiUrl = `${process.env.REACT_APP_API_URL}/download?id=${articleId}&username=${encodeURIComponent(
         username
       )}&check=false`;
       const response = await fetch(downloadApiUrl, { method: "POST" });
@@ -144,7 +144,7 @@ const MyFavorites = () => {
     setRemovingId(article.id);
     
     try {
-      const response = await fetch('http://localhost:8080/favorites', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/favorites`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

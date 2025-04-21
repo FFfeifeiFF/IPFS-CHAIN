@@ -16,7 +16,7 @@ function SearchResults() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://localhost:8080/search?q=${searchQuery}`); // 确保你的 Go 后端接口是 /api/search
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/search?q=${searchQuery}`); // 确保你的 Go 后端接口是 /api/search
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

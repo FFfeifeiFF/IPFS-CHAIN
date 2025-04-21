@@ -31,7 +31,8 @@ func Db(c *gin.Context) {
 	// 打印接收到的数据
 	log.Printf("Received upload request: %+v", req)
 
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, RegisterResponse{Success: false, Error: "数据库连接失败"})

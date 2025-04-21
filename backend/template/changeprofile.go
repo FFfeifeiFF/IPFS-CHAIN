@@ -42,7 +42,8 @@ func initDB() {
 	var err error
 	// 从环境变量或配置读取更安全
 	// dsn := os.Getenv("DB_DSN")
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan?charset=utf8mb4&parseTime=True&loc=Local"
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("数据库连接失败: %v", err)

@@ -298,7 +298,8 @@ func DownloadFile(broker *Broker) gin.HandlerFunc {
 		fmt.Println(isCheck)
 		//fmt.Println(username)
 		//连接数据库
-		dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+		//dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+		dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 		db, err := sql.Open("mysql", dsn)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库连接失败"})
@@ -395,7 +396,7 @@ func DownloadFile(broker *Broker) gin.HandlerFunc {
 				c,
 				db,
 				username,        // 执行操作的用户是自己
-				"self_download", // 定义一个新的操作类型表示“自下载”
+				"self_download", // 定义一个新的操作类型表示"自下载"
 				0,               // 积分变化量为 0
 			)
 			if err != nil {

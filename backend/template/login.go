@@ -34,7 +34,8 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, RegisterResponse{Success: false, Error: "数据库连接失败"})
@@ -42,10 +43,6 @@ func LoginHandler(c *gin.Context) {
 	}
 	defer db.Close()
 
-	if err := db.Ping(); err != nil {
-		c.JSON(http.StatusInternalServerError, RegisterResponse{Success: false, Error: "数据库连接失败"})
-		return
-	}
 	fmt.Println("Successfully connected to MySQL!")
 	fmt.Println(req.Username)
 	var storedHashedPassword string

@@ -10,13 +10,16 @@
         const location = useLocation();
         const searchParams = new URLSearchParams(location.search); // 创建 URLSearchParams 对象
         const username = searchParams.get('username'); // 从 URL 参数中获取 username
+        const query = searchParams.get('q'); // *** 修改这里：从 URL 参数 'q' 获取搜索词 ***
 
-        console.log("Username from URL:", username); // 打印获取到的 username
+        console.log("Search Page - Username from URL:", username);
+        console.log("Search Page - Query from URL (param 'q'):", query); // 更新日志
+
         return (
             <div className="container">
                 <Head username={username}/>
                 <div className="content-area">
-                    <SearchResults2/>
+                    <SearchResults2 username={username} query={query} />
                        {/* <Sidebar2 username={username} /> */}
                 </div>
                 <Footer/>

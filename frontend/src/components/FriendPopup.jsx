@@ -15,45 +15,47 @@ const FriendPopup = ({ username, onClose }) => {
   const [friendToDelete, setFriendToDelete] = useState(null); // 要删除的好友
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // 显示删除确认对话框
   const [chatFriend, setChatFriend] = useState(null); // 当前聊天的好友
+  const [loading, setLoading] = useState(false);
 
   // 获取好友列表
   const fetchFriends = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/friends?username=${encodeURIComponent(username)}`);
-      if (!response.ok) {
-        throw new Error('获取好友列表失败');
-      }
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/friends?username=${encodeURIComponent(username)}`);
+      if (!response.ok) throw new Error('获取好友列表失败');
       const data = await response.json();
       setFriends(data.friends || []);
     } catch (error) {
       console.error('获取好友列表错误:', error);
       setError('获取好友列表失败，请稍后再试');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 获取好友请求列表
   const fetchFriendRequests = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/friend-requests?username=${encodeURIComponent(username)}`);
-      if (!response.ok) {
-        throw new Error('获取好友请求失败');
-      }
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/friend-requests?username=${encodeURIComponent(username)}`);
+      if (!response.ok) throw new Error('获取好友请求失败');
       const data = await response.json();
       setFriendRequests(data.requests || []);
       setRequestCount(data.count || 0);
     } catch (error) {
       console.error('获取好友请求错误:', error);
       setError('获取好友请求失败，请稍后再试');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 获取好友请求数量
   const fetchRequestCount = async () => {
+    if (!username) return;
     try {
-      const response = await fetch(`http://localhost:8080/friend-request-count?username=${encodeURIComponent(username)}`);
-      if (!response.ok) {
-        return;
-      }
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/friend-request-count?username=${encodeURIComponent(username)}`);
+      if (!response.ok) throw new Error('获取请求数量失败');
       const data = await response.json();
       setRequestCount(data.count || 0);
     } catch (error) {
@@ -77,11 +79,10 @@ const FriendPopup = ({ username, onClose }) => {
     setIsSearching(true);
     setError(null);
     
+    setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/users/search?query=${encodeURIComponent(searchQuery)}&username=${encodeURIComponent(username)}`);
-      if (!response.ok) {
-        throw new Error('搜索用户失败');
-      }
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/users/search?query=${encodeURIComponent(searchQuery)}&username=${encodeURIComponent(username)}`);
+      if (!response.ok) throw new Error('搜索用户失败');
       const data = await response.json();
       setSearchResults(data.users || []);
     } catch (error) {
@@ -89,13 +90,15 @@ const FriendPopup = ({ username, onClose }) => {
       setError('搜索用户失败，请稍后再试');
     } finally {
       setIsSearching(false);
+      setLoading(false);
     }
   };
 
   // 发送好友请求
   const sendFriendRequest = async (targetUsername) => {
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/friend-requests', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/friend-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -120,13 +123,16 @@ const FriendPopup = ({ username, onClose }) => {
     } catch (error) {
       console.error('发送好友请求错误:', error);
       setError(error.message || '发送好友请求失败，请稍后再试');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 响应好友请求
   const respondToFriendRequest = async (requestId, accept) => {
+    setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/friend-requests/${requestId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/friend-requests/${requestId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -150,6 +156,8 @@ const FriendPopup = ({ username, onClose }) => {
     } catch (error) {
       console.error('处理好友请求错误:', error);
       setError(error.message || '处理好友请求失败，请稍后再试');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -163,8 +171,9 @@ const FriendPopup = ({ username, onClose }) => {
   const confirmDeleteFriend = async () => {
     if (!friendToDelete) return;
     
+    setLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/friend', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/friend`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -188,6 +197,8 @@ const FriendPopup = ({ username, onClose }) => {
     } catch (error) {
       console.error('删除好友错误:', error);
       setError(error.message || '删除好友关系失败，请稍后再试');
+    } finally {
+      setLoading(false);
     }
   };
 

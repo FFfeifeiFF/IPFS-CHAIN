@@ -17,16 +17,43 @@ import ShareDialog from './ShareDialog'; // 导入ShareDialog组件
 // 注册 Chart.js 组件
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-// 模拟获取文章风险等级和标签（实际应来自后端）
-const getArticleAttributes = (article) => {
-  let riskLevel = "low"; // 默认低风险
+// --- 移除旧的客户端风险/标签计算 ---
+// const getArticleAttributes = (article) => { ... };
+
+// --- 新增：统一的数据获取函数 ---
+const fetchArticlesData = async ({ username, page, pageSize, riskLevel = null, setArticles, setTotalCount, setLoading, setError }) => {
+  setLoading(true);
+  setError(null);
+  setArticles([]); // 清空旧数据
+
+  try {
+    let url = `${process.env.REACT_APP_API_URL}/articles?page=${page}&pageSize=${pageSize}&username=${encodeURIComponent(username)}`;
+    if (riskLevel) {
+      url += `&riskLevel=${encodeURIComponent(riskLevel)}`;
+    }
+    console.log(`Fetching data from: ${url}`); // Debug log
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      let errorMsg = `HTTP error! status: ${response.status}`;
+      try {
+        const errData = await response.json();
+        errorMsg = errData.error || errData.message || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
+    }
+    const data = await response.json();
+
+    // --- 新增：在前端附加风险等级和标签（基于后端返回的points） ---
+    const articlesWithAttributes = data.data.map((article) => {
+        let riskLevelFrontend = "low"; // 默认低风险
   const tags = [];
 
   if (article.points >= 15) {
-    riskLevel = "high";
+            riskLevelFrontend = "high";
     tags.push({ text: "高危", type: "risk-high" });
   } else if (article.points >= 5) {
-    riskLevel = "medium";
+            riskLevelFrontend = "medium";
     tags.push({ text: "中危", type: "risk-medium" });
   } else {
     tags.push({ text: "提示", type: "risk-low" });
@@ -39,87 +66,159 @@ const getArticleAttributes = (article) => {
   if (article.author === "官方") {
     tags.push({ text: "官方发布", type: "official" });
   }
-  if (new Date(article.date) > new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)) {
-    // 3天内算最新
+        // 注意：这里的"最新"标签判断可能需要调整，因为后端可能没有直接返回日期是否最新
+        // 暂且保留之前的逻辑，但理想情况下后端应提供此信息或前端获取完整数据后判断
+         if (article.date) { // 确保有日期
+            try {
+                const articleDate = new Date(article.date);
+                if (!isNaN(articleDate) && articleDate > new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)) {
     tags.push({ text: "最新", type: "latest" });
-  }
+                }
+            } catch(e){ console.warn("Error parsing date for 'latest' tag:", article.date, e)}
+        }
 
-  return { riskLevel, tags };
+        return { ...article, riskLevel: riskLevelFrontend, tags }; // 使用计算出的 riskLevel 和 tags
+    });
+
+
+    setArticles(articlesWithAttributes);
+    setTotalCount(data.totalCount);
+    console.log(`Fetched ${riskLevel || 'all'} articles. Count: ${data.totalCount}, Data:`, articlesWithAttributes); // Debug log
+  } catch (err) {
+    console.error(`获取 ${riskLevel || '所有'} 文章数据失败:`, err);
+    setError(err);
+    setArticles([]); // 出错时确保清空
+    setTotalCount(0);
+  } finally {
+    setLoading(false);
+  }
 };
 
+
 function ArticleListDashboardLayout({ username }) {
-  const [articles, setArticles] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [articlesPerPage] = useState(10); // 每页显示更多项
-  const [totalCount, setTotalCount] = useState(0);
+  // --- 移除旧的主文章列表状态 ---
+  // const [articles, setArticles] = useState(null);
+  // const [loading, setLoading] = useState(true);
+  // const [error, setError] = useState(null);
+  // const [currentPage, setCurrentPage] = useState(1);
+  // const [articlesPerPage] = useState(10);
+  // const [totalCount, setTotalCount] = useState(0);
+
+  // --- 新增：各区域独立状态 ---
+  const [hotspotArticles, setHotspotArticles] = useState([]);
+  const [hotspotTotalCount, setHotspotTotalCount] = useState(0);
+  const [hotspotLoading, setHotspotLoading] = useState(true);
+  const [hotspotError, setHotspotError] = useState(null);
+  const [hotspotCurrentPage, setHotspotCurrentPage] = useState(1);
+  const hotspotItemsPerPage = 6; // 热点情报一页显示6个
+
+  const [highRiskArticles, setHighRiskArticles] = useState([]);
+  const [highRiskTotalCount, setHighRiskTotalCount] = useState(0);
+  const [highRiskLoading, setHighRiskLoading] = useState(true);
+  const [highRiskError, setHighRiskError] = useState(null);
+  const [highRiskCurrentPage, setHighRiskCurrentPage] = useState(1);
+  const highRiskItemsPerPage = 6; // 高危情报一页显示6个
+
+  const [mediumLowRiskArticles, setMediumLowRiskArticles] = useState([]);
+  const [mediumLowRiskTotalCount, setMediumLowRiskTotalCount] = useState(0);
+  const [mediumLowRiskLoading, setMediumLowRiskLoading] = useState(true);
+  const [mediumLowRiskError, setMediumLowRiskError] = useState(null);
+  const [mediumLowRiskCurrentPage, setMediumLowRiskCurrentPage] = useState(1);
+  const mediumLowRiskItemsPerPage = 6; // 中低危情报一页显示6个
+
+  // --- 其他状态 (基本不变) ---
   const [downloadingId, setDownloadingId] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const eventSourceRef = useRef(null);
-
-    // --- 新增：用户资料（积分）的状态 ---
-  const [userProfile, setUserProfile] = useState(null); // 存储 { username: '...', points: ... }
-  const [profileLoading, setProfileLoading] = useState(true); // 资料加载状态
-  const [profileError, setProfileError] = useState(null); // 资料加载错误
+  const [userProfile, setUserProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState(null);
   const [visibleModal, setVisibleModal] = useState(false);
   const [currentSummary, setCurrentSummary] = useState("");
-  
-  // 新增点击处理函数
-  const handleTitleClick = (e, summary) => {
-    e.preventDefault();
-    setCurrentSummary(summary || "暂无该文件的简介信息");
-    setVisibleModal(true);
-  };
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedArticleForShare, setSelectedArticleForShare] = useState(null);
+  const [favoriteStatus, setFavoriteStatus] = useState({});
+  const [isToggleFavorite, setIsToggleFavorite] = useState(false);
+
+  // --- 图表状态 ---
+  const [riskStats, setRiskStats] = useState([]);
+  const [riskStatsLoading, setRiskStatsLoading] = useState(true);
+  const [riskStatsError, setRiskStatsError] = useState(null);
+  const [fileTypeStats, setFileTypeStats] = useState([]); // 文件类型统计保持不变
+
       const navigate = useNavigate();
-  // --- 获取文章列表的 Effect ---
+
+  // --- 新增：获取热点情报的 Effect ---
   useEffect(() => {
-    const fetchArticles = async () => {
-      setLoading(true);
-      setError(null);
-      setArticles(null); // 清空旧数据
-      try {
-        const response = await fetch(
-          `http://localhost:8080/articles?page=${currentPage}&pageSize=${articlesPerPage}&username=${encodeURIComponent(
-            username || ""
-          )}`
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        // 为每个文章附加风险等级和标签
-        const articlesWithAttributes = data.data.map((article) => {
-            const attributes = getArticleAttributes(article);
-            return { ...article, ...attributes }; // 合并文章数据和属性
-        });
-        setArticles(articlesWithAttributes);
-        setTotalCount(data.totalCount);
-      } catch (err) {
-        console.error("获取文章数据失败:", err);
-        setError(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (username) {
-      fetchArticles();
+      fetchArticlesData({
+        username,
+        page: hotspotCurrentPage,
+        pageSize: hotspotItemsPerPage,
+        riskLevel: null, // 获取所有风险等级
+        setArticles: setHotspotArticles,
+        setTotalCount: setHotspotTotalCount,
+        setLoading: setHotspotLoading,
+        setError: setHotspotError,
+      });
     } else {
-      setLoading(false);
-      setArticles([]);
-      setTotalCount(0);
+        // 用户未登录时重置状态
+        setHotspotArticles([]);
+        setHotspotTotalCount(0);
+        setHotspotLoading(false);
+        setHotspotError(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, articlesPerPage, username]);
+  }, [username, hotspotCurrentPage, hotspotItemsPerPage]); // 依赖项
 
-  // --- 处理 SSE 通知的 Effect ---
+  // --- 新增：获取高危情报的 Effect ---
+  useEffect(() => {
+    if (username) {
+      fetchArticlesData({
+        username,
+        page: highRiskCurrentPage,
+        pageSize: highRiskItemsPerPage,
+        riskLevel: 'high', // 只获取高风险
+        setArticles: setHighRiskArticles,
+        setTotalCount: setHighRiskTotalCount,
+        setLoading: setHighRiskLoading,
+        setError: setHighRiskError,
+      });
+    } else {
+        setHighRiskArticles([]);
+        setHighRiskTotalCount(0);
+        setHighRiskLoading(false);
+        setHighRiskError(null);
+    }
+  }, [username, highRiskCurrentPage, highRiskItemsPerPage]); // 依赖项
+
+  // --- 新增：获取中低危情报的 Effect ---
+  useEffect(() => {
+    if (username) {
+      fetchArticlesData({
+        username,
+        page: mediumLowRiskCurrentPage,
+        pageSize: mediumLowRiskItemsPerPage,
+        riskLevel: 'medium,low', // 获取中和低风险
+        setArticles: setMediumLowRiskArticles,
+        setTotalCount: setMediumLowRiskTotalCount,
+        setLoading: setMediumLowRiskLoading,
+        setError: setMediumLowRiskError,
+      });
+    } else {
+        setMediumLowRiskArticles([]);
+        setMediumLowRiskTotalCount(0);
+        setMediumLowRiskLoading(false);
+        setMediumLowRiskError(null);
+    }
+  }, [username, mediumLowRiskCurrentPage, mediumLowRiskItemsPerPage]); // 依赖项
+
+  // --- 处理 SSE 通知的 Effect (不变) ---
    useEffect(() => {
     if (username) {
       console.log(`为用户 ${username} 设置 SSE 连接`);
       if (eventSourceRef.current) eventSourceRef.current.close();
 
-      const sseUrl = `http://localhost:8080/subscribe/${encodeURIComponent(
+      const sseUrl = `${process.env.REACT_APP_API_URL}/subscribe/${encodeURIComponent(
         username
       )}`;
       const es = new EventSource(sseUrl);
@@ -165,7 +264,8 @@ function ArticleListDashboardLayout({ username }) {
         }
     }
   }, [username]);
- // --- 新增：获取用户资料的 Effect ---
+
+ // --- 获取用户资料的 Effect (不变) ---
   useEffect(() => {
     // 定义获取用户资料的异步函数
     const fetchUserProfile = async () => {
@@ -185,7 +285,7 @@ function ArticleListDashboardLayout({ username }) {
       try {
         // 调用后端接口获取用户资料
         const response = await fetch(
-          `http://localhost:8080/profile?username=${encodeURIComponent(
+          `${process.env.REACT_APP_API_URL}/profile?username=${encodeURIComponent(
             username
           )}`
         );
@@ -220,59 +320,51 @@ function ArticleListDashboardLayout({ username }) {
 
     // 执行获取用户资料的函数
     fetchUserProfile();
-
-    // 这个 effect 依赖于 username，当 username 变化时会重新执行
   }, [username]);
 
-  // 添加风险等级统计数据状态
-  const [riskStats, setRiskStats] = useState([]);
-  const [riskStatsLoading, setRiskStatsLoading] = useState(true);
-  const [riskStatsError, setRiskStatsError] = useState(null);
-
-  // 添加文件类型统计数据状态
-  const [fileTypeStats, setFileTypeStats] = useState([]);
-  const [fileStatsLoading, setFileStatsLoading] = useState(true);
-  const [fileStatsError, setFileStatsError] = useState(null);
-
-  // 获取文件类型统计数据
+  // --- 获取文件类型统计数据 Effect (不变) ---
+  // 注意：这个接口可能需要修改，因为它看起来是获取全局统计，可能不依赖于当前文章列表
   useEffect(() => {
     const fetchFileStats = async () => {
       if (!username) return;
 
       try {
-        const response = await fetch("http://localhost:8080/file-stats");
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/file-stats`);
         if (!response.ok) {
           throw new Error("无法获取文件统计数据");
         }
         const data = await response.json();
         setFileTypeStats(data.stats);
-        setFileStatsLoading(false);
+        // setFileStatsLoading(false); // 这个状态变量似乎未定义，注释掉
       } catch (err) {
         console.error("获取文件统计数据失败:", err);
-        setFileStatsError(err.message);
-        setFileStatsLoading(false);
+        // setFileStatsError(err.message); // 这个状态变量似乎未定义，注释掉
+        // setFileStatsLoading(false); // 这个状态变量似乎未定义，注释掉
       }
     };
 
     fetchFileStats();
   }, [username]);
 
-  // 计算风险等级统计
+  // --- 新增：计算风险等级统计 Effect (基于所有热点数据或专门接口) ---
+  // 注意：这个统计现在基于 hotspotArticles，可能不代表全局风险分布
+  // 更好的方法是后端提供一个专门的统计接口
   useEffect(() => {
-    if (!articles) {
+    if (hotspotLoading || hotspotError || !hotspotArticles) {
       setRiskStatsLoading(true);
+      setRiskStatsError(hotspotError); // 使用 hotspot 的错误状态
       return;
     }
 
     try {
-      // 计算各风险等级的数量
-      const highRiskCount = articles.filter(
+      // 计算各风险等级的数量 (基于当前页的热点数据)
+      const highRiskCount = hotspotArticles.filter(
         (article) => article.riskLevel === "high"
       ).length;
-      const mediumRiskCount = articles.filter(
+      const mediumRiskCount = hotspotArticles.filter(
         (article) => article.riskLevel === "medium"
       ).length;
-      const lowRiskCount = articles.filter(
+      const lowRiskCount = hotspotArticles.filter(
         (article) => article.riskLevel === "low"
       ).length;
 
@@ -281,25 +373,28 @@ function ArticleListDashboardLayout({ username }) {
         { riskLevel: "高危", count: highRiskCount, color: "#FF6384" },
         { riskLevel: "中危", count: mediumRiskCount, color: "#FFCE56" },
         { riskLevel: "低危", count: lowRiskCount, color: "#36A2EB" },
-      ];
+      ].filter(stat => stat.count > 0); // 只显示有数据的风险等级
 
       setRiskStats(riskData);
       setRiskStatsLoading(false);
+      setRiskStatsError(null); // 清除错误
     } catch (err) {
       console.error("计算风险等级统计失败:", err);
       setRiskStatsError(err.message);
       setRiskStatsLoading(false);
     }
-  }, [articles]);
+  }, [hotspotArticles, hotspotLoading, hotspotError]); // 依赖于热点数据状态
 
-  const paginate = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    // 可选：翻页后滚动到列表顶部
-    const listElement = document.querySelector(".main-content-area");
-    if (listElement) listElement.scrollTo(0, 0);
-  };
 
-  // --- 处理下载点击的函数 (与之前基本相同) ---
+ // --- 移除旧的主分页函数 ---
+  // const paginate = (pageNumber) => { ... };
+
+  // --- 新增：各区域的分页函数 ---
+  const paginateHotspot = (pageNumber) => setHotspotCurrentPage(pageNumber);
+  const paginateHighRisk = (pageNumber) => setHighRiskCurrentPage(pageNumber);
+  const paginateMediumLowRisk = (pageNumber) => setMediumLowRiskCurrentPage(pageNumber);
+
+  // --- 处理下载点击的函数 (不变) ---
   const handleDownloadClick = async (
     articleId,
     suggestedFilename,
@@ -314,7 +409,7 @@ function ArticleListDashboardLayout({ username }) {
     try {
       // 步骤 1: 检查积分
       const checkResponse = await fetch(
-        `http://localhost:8080/download?id=${articleId}&username=${encodeURIComponent(
+        `${process.env.REACT_APP_API_URL}/download?id=${articleId}&username=${encodeURIComponent(
           username
         )}&check=true`,
         { method: "POST" }
@@ -333,7 +428,7 @@ function ArticleListDashboardLayout({ username }) {
       }
 
       // 步骤 2: 执行下载
-      const downloadApiUrl = `http://localhost:8080/download?id=${articleId}&username=${encodeURIComponent(
+      const downloadApiUrl = `${process.env.REACT_APP_API_URL}/download?id=${articleId}&username=${encodeURIComponent(
         username
       )}&check=false`;
       const response = await fetch(downloadApiUrl, { method: "POST" });
@@ -386,7 +481,7 @@ function ArticleListDashboardLayout({ username }) {
          // --- 可选但推荐: 下载成功后，重新获取用户资料以更新积分显示 ---
           try {
         const profileResponse = await fetch(
-          `http://localhost:8080/user/profile?username=${encodeURIComponent(
+          `${process.env.REACT_APP_API_URL}/profile?username=${encodeURIComponent(
             username
           )}`
         );
@@ -407,7 +502,8 @@ function ArticleListDashboardLayout({ username }) {
       setDownloadingId(null);
     }
   };
-// --- 新增：辅助函数，用于确定用户等级和样式 ---
+
+  // --- 辅助函数：获取用户等级信息 (不变) ---
     const getUserLevelInfo = () => {
     // 正在加载时显示的信息
     if (profileLoading) {
@@ -449,6 +545,8 @@ function ArticleListDashboardLayout({ username }) {
     // 返回包含积分、等级和样式类的信息
     return { pointsDisplay: points, level: level, pointsClass: pointsClass };
   };
+
+  // --- 处理编辑资料点击 (不变) ---
  const handleEditProfileClick = () => {
     console.log("Navigating to profile edit with username:", username);
     navigate("/changeprofile", {
@@ -457,72 +555,43 @@ function ArticleListDashboardLayout({ username }) {
     });
   };
 
-  // 分页状态
-  const [hotspotCurrentPage, setHotspotCurrentPage] = useState(1);
-  const [highRiskCurrentPage, setHighRiskCurrentPage] = useState(1);
-  const [mediumLowRiskCurrentPage, setMediumLowRiskCurrentPage] = useState(1);
+  // --- 移除旧的分页状态和风险分类逻辑 ---
+  // const [hotspotCurrentPage, setHotspotCurrentPage] = useState(1);
+  // const [highRiskCurrentPage, setHighRiskCurrentPage] = useState(1);
+  // const [mediumLowRiskCurrentPage, setMediumLowRiskCurrentPage] = useState(1);
+  // const hotspotItemsPerPage = 6;
+  // const highRiskItemsPerPage = 6;
+  // const mediumLowRiskItemsPerPage = 6;
+  // const paginateHotspot = (pageNumber) => { ... };
+  // const paginateHighRisk = (pageNumber) => { ... };
+  // const paginateMediumLowRisk = (pageNumber) => { ... };
+  // const getArticlesByRiskLevel = (level) => { ... };
+  // const highRiskArticles = articles ? getArticlesByRiskLevel("high") : [];
+  // const mediumRiskArticles = articles ? getArticlesByRiskLevel("medium") : [];
+  // const lowRiskArticles = articles ? getArticlesByRiskLevel("low") : [];
+  // const mediumLowRiskArticles = [...mediumRiskArticles, ...lowRiskArticles];
+  // const getCurrentHotspotArticles = () => { ... };
+  // const getCurrentHighRiskArticles = () => { ... };
+  // const getCurrentMediumLowRiskArticles = () => { ... };
 
-  // 每页显示数量
-  const hotspotItemsPerPage = 6; // 热点情报一页显示6个 (2行，每行3个)
-  const highRiskItemsPerPage = 6; // 高危情报一页显示6个 (2行，每行3个)
-  const mediumLowRiskItemsPerPage = 6; // 中低危情报一页显示6个 (2行，每行3个)
-
-  // 分页函数
-  const paginateHotspot = (pageNumber) => {
-    setHotspotCurrentPage(pageNumber);
-  };
-
-  const paginateHighRisk = (pageNumber) => {
-    setHighRiskCurrentPage(pageNumber);
-  };
-
-  const paginateMediumLowRisk = (pageNumber) => {
-    setMediumLowRiskCurrentPage(pageNumber);
-  };
-
-  // 根据风险等级分类文章
-  const getArticlesByRiskLevel = (level) => {
-    if (!articles) return [];
-    return articles.filter((article) => article.riskLevel === level);
-  };
-
-  const highRiskArticles = articles ? getArticlesByRiskLevel("high") : [];
-  const mediumRiskArticles = articles ? getArticlesByRiskLevel("medium") : [];
-  const lowRiskArticles = articles ? getArticlesByRiskLevel("low") : [];
-  const mediumLowRiskArticles = [...mediumRiskArticles, ...lowRiskArticles];
-
-  // 获取当前页的热点文章
-  const getCurrentHotspotArticles = () => {
-    const indexOfLastItem = hotspotCurrentPage * hotspotItemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - hotspotItemsPerPage;
-    return articles ? articles.slice(indexOfFirstItem, indexOfLastItem) : [];
-  };
-
-  // 获取当前页的高危文章
-  const getCurrentHighRiskArticles = () => {
-    const indexOfLastItem = highRiskCurrentPage * highRiskItemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - highRiskItemsPerPage;
-    return highRiskArticles.slice(indexOfFirstItem, indexOfLastItem);
-  };
-
-  // 获取当前页的中低危文章
-  const getCurrentMediumLowRiskArticles = () => {
-    const indexOfLastItem =
-      mediumLowRiskCurrentPage * mediumLowRiskItemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - mediumLowRiskItemsPerPage;
-    return mediumLowRiskArticles.slice(indexOfFirstItem, indexOfLastItem);
-  };
-
-  // 处理"了解更多"点击，导航到文件统计页面
+  // --- 处理"了解更多"点击 (不变) ---
   const handleViewFileStats = () => {
     navigate("/file-stats", { state: { username } });
   };
 
-  // 添加分享对话框状态
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [selectedArticleForShare, setSelectedArticleForShare] = useState(null);
-  
-  // 全局WebSocket连接
+  // --- 分享对话框状态和处理 (不变) ---
+  // const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  // const [selectedArticleForShare, setSelectedArticleForShare] = useState(null);
+  const handleShareClick = (article) => {
+    setSelectedArticleForShare(article);
+    setShareDialogOpen(true);
+  };
+  const handleCloseShareDialog = () => {
+    setShareDialogOpen(false);
+    setSelectedArticleForShare(null);
+  };
+
+  // --- 全局WebSocket连接 (不变) ---
   useEffect(() => {
     // 如果已经存在WebSocket连接，则不再创建
     if (window.chatWebSocket) return;
@@ -531,7 +600,7 @@ function ArticleListDashboardLayout({ username }) {
     if (!username) return;
     
     // 创建WebSocket连接并存储在window对象中，以便在整个应用程序中使用
-    const ws = new WebSocket(`ws://localhost:8080/ws/chat?username=${encodeURIComponent(username)}`);
+    const ws = new WebSocket(`ws://8.148.71.83:8080/ws/chat?username=${encodeURIComponent(username)}`);
     window.chatWebSocket = ws;
     
     // 设置WebSocket事件处理
@@ -558,54 +627,54 @@ function ArticleListDashboardLayout({ username }) {
     };
   }, [username]);
   
-  // 处理分享点击
-  const handleShareClick = (article) => {
-    setSelectedArticleForShare(article);
-    setShareDialogOpen(true);
-  };
-  
-  // 关闭分享对话框
-  const handleCloseShareDialog = () => {
-    setShareDialogOpen(false);
-    setSelectedArticleForShare(null);
-  };
+  // --- 收藏状态和处理 (不变) ---
+  // const [favoriteStatus, setFavoriteStatus] = useState({});
+  // const [isToggleFavorite, setIsToggleFavorite] = useState(false);
 
-  // 在已有的state变量之后添加收藏状态的存储
-  const [favoriteStatus, setFavoriteStatus] = useState({}); // 存储每篇文章的收藏状态
-  const [isToggleFavorite, setIsToggleFavorite] = useState(false); // 收藏操作中状态
-
-  // 在其他useEffect之后添加检查收藏状态的Effect
+  // --- 检查收藏状态 Effect (现在需要检查所有可见的文章) ---
   useEffect(() => {
-    // 如果没有文章数据或用户名，不需要检查
-    if (!articles || !username) return;
-    
-    // 批量检查文章的收藏状态
+    if (!username) return;
+
+    // 合并所有当前可见的文章ID
+    const allVisibleArticleIds = [
+        ...hotspotArticles,
+        ...highRiskArticles,
+        ...mediumLowRiskArticles
+    ].map(article => article.id)
+     .filter((id, index, self) => self.indexOf(id) === index); // 去重
+
+    if (allVisibleArticleIds.length === 0) return;
+
     const checkFavoriteStatus = async () => {
-      const articleIds = articles.map(article => article.id);
-      
       try {
-        // 逐个检查文章是否被收藏
         const statusMap = {};
-        
-        for (const articleId of articleIds) {
-          const response = await fetch(`http://localhost:8080/favorites/check?username=${encodeURIComponent(username)}&articleId=${articleId}`);
-          
+        for (const articleId of allVisibleArticleIds) {
+            // 如果这个ID的状态已经被之前的检查设置了，就跳过，避免重复API调用
+            if (favoriteStatus.hasOwnProperty(articleId)) {
+                statusMap[articleId] = favoriteStatus[articleId];
+                continue;
+            }
+          const response = await fetch(`${process.env.REACT_APP_API_URL}/favorites/check?username=${encodeURIComponent(username)}&articleId=${articleId}`);
           if (response.ok) {
             const data = await response.json();
             statusMap[articleId] = data.isFavorited;
+          } else {
+             statusMap[articleId] = false; // 获取失败，默认为未收藏
+             console.warn(`检查文章 ${articleId} 收藏状态失败: ${response.status}`);
           }
         }
-        
-        setFavoriteStatus(statusMap);
+        // 合并新旧状态，避免覆盖还未检查的ID
+        setFavoriteStatus(prevStatus => ({ ...prevStatus, ...statusMap }));
       } catch (error) {
         console.error('检查收藏状态失败:', error);
       }
     };
     
     checkFavoriteStatus();
-  }, [articles, username]);
+    // 依赖项包含所有文章列表和用户名
+  }, [hotspotArticles, highRiskArticles, mediumLowRiskArticles, username]); // 依赖所有文章列表确保状态更新
 
-  // 在其他函数之后添加处理收藏的函数
+  // --- 处理收藏点击 (不变) ---
   const handleFavoriteClick = async (article) => {
     if (!username) {
       alert('请先登录');
@@ -619,7 +688,7 @@ function ArticleListDashboardLayout({ username }) {
     
     try {
       const currentStatus = favoriteStatus[article.id] || false;
-      const url = 'http://localhost:8080/favorites';
+      const url = `${process.env.REACT_APP_API_URL}/favorites`;
       const method = currentStatus ? 'DELETE' : 'POST';
       
       const response = await fetch(url, {
@@ -638,10 +707,13 @@ function ArticleListDashboardLayout({ username }) {
         
         // 已经收藏的情况是正常的，不需要弹出错误
         if (errorData.alreadyFavorited) {
-          alert('此文章已收藏');
+          // 只更新状态，不弹窗
+           setFavoriteStatus(prev => ({ ...prev, [article.id]: true }));
+           console.log(`文章 ${article.id} 已收藏 (重复添加)`);
+           setIsToggleFavorite(false); // 记得解除锁定
           return;
         }
-        
+        // 其他错误，正常抛出
         throw new Error(errorData.error || '操作失败');
       }
       
@@ -653,7 +725,7 @@ function ArticleListDashboardLayout({ username }) {
         [article.id]: data.isFavorited,
       }));
       
-      // 显示操作结果
+      // 显示操作结果 (可选优化：可以用 Toast 通知代替 alert)
       alert(currentStatus ? '已取消收藏' : '收藏成功');
       
     } catch (error) {
@@ -664,7 +736,14 @@ function ArticleListDashboardLayout({ username }) {
     }
   };
 
-  // --- 渲染逻辑 ---
+   // --- 统一的点击标题处理 (不变) ---
+   const handleTitleClick = (e, summary) => {
+       e.preventDefault(); // 阻止可能的默认链接跳转
+       setCurrentSummary(summary || "暂无该文件的简介信息");
+       setVisibleModal(true);
+   };
+
+  // --- 登录提示 (不变) ---
   if (!username) {
     return (
       <div className="login-prompt-container">
@@ -672,411 +751,137 @@ function ArticleListDashboardLayout({ username }) {
       </div>
     );
   }
-// 调用辅助函数获取要在 UI 上显示的信息
-  const { pointsDisplay, level, pointsClass } = getUserLevelInfo();
-  const pageNumbers = [];
-  for (let i = 1; i <= Math.ceil(totalCount / articlesPerPage); i++) {
-    pageNumbers.push(i);
-  }
 
-  // 渲染文章卡片
+  // --- 获取用户等级信息 (不变) ---
+  const { pointsDisplay, level, pointsClass } = getUserLevelInfo();
+
+  // --- 新增：通用的渲染分页器函数 ---
+  const renderPagination = (currentPage, totalItems, itemsPerPage, paginateFunc) => {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    if (totalPages <= 1) return null; // 如果只有一页或没有数据，不显示分页
+
+    return (
+      <nav className="pagination-layout">
+        <ul>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <li key={i + 1} className={currentPage === i + 1 ? "active" : ""}>
+              <button onClick={() => paginateFunc(i + 1)}>{i + 1}</button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    );
+  };
+
+  // --- 新增：通用的渲染文章卡片函数 ---
+  // (这个函数本身逻辑不变，但调用它的地方会传入不同的文章列表)
   const renderArticleCard = (article) => (
-    <div
-      key={article.id}
-      className={`article-card-layout ${article.riskLevel}`}
-    >
-                    <div className="card-icon-area">
-                       <span className={`risk-indicator ${article.riskLevel}`}>
-          {article.riskLevel === "high"
-            ? "高"
-            : article.riskLevel === "medium"
-            ? "中"
-            : "低"}
-                       </span>
-                    </div>
-                    <div className="card-content-layout">
-                    <h3 className="card-title-layout">
-                              <a 
-                                  href={`/article/${article.id}`} 
-                                  onClick={(e) => handleTitleClick(e, article.summary)}
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="article-title-link"
-                                  title="点击查看简介"
-                              >
-                                  {article.title || "未命名文件"}
-                              </a>
-                        </h3>
-                        <div className="card-meta-layout">
-                            {article.tags && article.tags.length > 0 && (
-                                <span className="meta-tags">
-              {article.tags.map((tag) => (
-                <span key={tag.text} className={`tag tag-${tag.type}`}>
-                  {tag.text}
-                </span>
-                                    ))}
-                                </span>
-                            )}
-                            <span className="meta-item">发布者: {article.author}</span>
-                            <span className="meta-item">日期: {article.date}</span>
-                            <span className="meta-item">积分: {article.points}</span>
+    <div key={article.id} className={`info-card risk-${article.riskLevel}`}>
+                        <div className="info-card-header">
+                          <span className={`risk-badge ${article.riskLevel}`}>
+          {article.riskLevel === "high" ? "高危" : article.riskLevel === "medium" ? "中危" : "低危"}
+                          </span>
+                          <span className="info-date">{article.date}</span>
                         </div>
-                    </div>
-                    <div className="card-actions-layout">
-                        <button
-                            title="下载"
-          className={`action-button ${
-            downloadingId === article.id ? "loading" : ""
-          }`}
-          onClick={() =>
-            handleDownloadClick(
-              article.id,
-              article.filename || `${article.title}.bin`,
-              article.points
-            )
-          }
-                            disabled={downloadingId === article.id}
-        >
-          {downloadingId === article.id ? (
-            <div className="spinner-action"></div>
-          ) : (
-            <Download size={16} />
-          )}
-        </button>
-        <button 
-          title={favoriteStatus[article.id] ? "取消收藏" : "收藏"} 
-          className={`action-button ${favoriteStatus[article.id] ? "favorited" : ""}`}
-          onClick={() => handleFavoriteClick(article)}
-        >
-          <Bookmark size={16} />
-        </button>
-        <button 
-          title="分享" 
-          className="action-button"
-          onClick={() => handleShareClick(article)}
-        >
-          <Share2 size={16} />
-        </button>
-      </div>
-    </div>
+      <h3 className="info-title" onClick={(e) => handleTitleClick(e, article.summary)}>
+                          {article.title}
+                        </h3>
+                        <div className="info-footer">
+                          <span>{article.author}</span>
+                          <div className="info-actions">
+                            <button
+            className={`action-button ${downloadingId === article.id ? "loading" : ""}`}
+                              title="下载"
+            onClick={() => handleDownloadClick(article.id, article.filename || `${article.title}.bin`, article.points)}
+            disabled={downloadingId === article.id}
+          >
+           {downloadingId === article.id ? <div className="spinner-action"></div> : <Download size={16} />}
+                            </button>
+                            <button 
+            className={`action-button ${favoriteStatus[article.id] ? "favorited" : ""}`}
+                              title={favoriteStatus[article.id] ? "取消收藏" : "收藏"}
+                              onClick={() => handleFavoriteClick(article)}
+            disabled={isToggleFavorite} // 防止重复点击
+                            >
+                              <Bookmark size={16} />
+                            </button>
+                            <button 
+                              className="action-button" 
+                              title="分享"
+                              onClick={() => handleShareClick(article)}
+                            >
+                              <Share2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
   );
+
 
   return (
     <div className="dashboard-layout">
-      {/* 主内容区域 (文章列表) */}
+      {/* 主内容区域 */}
       <div className="main-content-area">
-        {loading && <p className="status-message">正在加载数据...</p>}
-        {error && (
-          <p className="status-message error">加载失败: {error.message}</p>
-        )}
 
-        {!loading && !error && articles && (
-          <>
-            {/* 热点情报分析区域 */}
-            <div className="info-section">
-              <h2 className="section-title">热点情报分析</h2>
-              {articles && articles.length === 0 ? (
-                <p className="no-data-message">暂无情报数据</p>
-              ) : (
-                <>
-                  <div className="info-cards-container">
-                    {getCurrentHotspotArticles().map((article, index) => (
-                      <div
-                        key={article.id}
-                        className={`info-card risk-${article.riskLevel}`}
-                      >
-                        <div className="info-card-header">
-                          <span className={`risk-badge ${article.riskLevel}`}>
-                            {article.riskLevel === "high"
-                              ? "高危"
-                              : article.riskLevel === "medium"
-                              ? "中危"
-                              : "低危"}
-                          </span>
-                          <span className="info-date">{article.date}</span>
-                        </div>
-                        <h3
-                          className="info-title"
-                          onClick={(e) => handleTitleClick(e, article.summary)}
-                        >
-                          {article.title}
-                        </h3>
-                        <div className="info-footer">
-                          <span>{article.author}</span>
-                          <div className="info-actions">
-                            <button
-                              className="action-button"
-                              title="下载"
-                              onClick={() =>
-                                handleDownloadClick(
-                                  article.id,
-                                  article.filename || `${article.title}.bin`,
-                                  article.points
-                                )
-                              }
-                            >
-                              <Download size={16} />
-                            </button>
-                            <button 
-                              className="action-button" 
-                              title={favoriteStatus[article.id] ? "取消收藏" : "收藏"}
-                              onClick={() => handleFavoriteClick(article)}
-                            >
-                              <Bookmark size={16} />
-                            </button>
-                            <button 
-                              className="action-button" 
-                              title="分享"
-                              onClick={() => handleShareClick(article)}
-                            >
-                              <Share2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* 热点情报分页 */}
-                  {articles && articles.length > hotspotItemsPerPage && (
-                    <nav className="pagination-layout">
-                      <ul>
-                        {Array.from(
-                          {
-                            length: Math.ceil(
-                              (articles ? articles.length : 0) /
-                                hotspotItemsPerPage
-                            ),
-                          },
-                          (_, i) => (
-                            <li
-                              key={i + 1}
-                              className={
-                                hotspotCurrentPage === i + 1 ? "active" : ""
-                              }
-                            >
-                              <button onClick={() => paginateHotspot(i + 1)}>
-                                {i + 1}
-                              </button>
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    </nav>
-                  )}
+        {/* 热点情报分析区域 (更新) */}
+        <div className="info-section">
+          <h2 className="section-title">热点情报分析</h2>
+          {hotspotLoading && <p className="status-message">正在加载热点数据...</p>}
+          {hotspotError && <p className="status-message error">加载热点失败: {hotspotError.message}</p>}
+          {!hotspotLoading && !hotspotError && hotspotArticles.length === 0 && <p className="no-data-message">暂无热点情报数据</p>}
+          {!hotspotLoading && !hotspotError && hotspotArticles.length > 0 && (
+            <>
+              <div className="info-cards-container">
+                {hotspotArticles.map(renderArticleCard)}
+              </div>
+              {renderPagination(hotspotCurrentPage, hotspotTotalCount, hotspotItemsPerPage, paginateHotspot)}
                 </>
               )}
             </div>
 
-            {/* 最近高危情报区域 */}
+        {/* 高危情报区域 (更新) */}
             <div className="info-section">
               <h2 className="section-title">高危情报</h2>
-              {highRiskArticles.length === 0 ? (
-                <p className="no-data-message">暂无高危情报</p>
-              ) : (
+          {highRiskLoading && <p className="status-message">正在加载高危数据...</p>}
+          {highRiskError && <p className="status-message error">加载高危失败: {highRiskError.message}</p>}
+          {!highRiskLoading && !highRiskError && highRiskArticles.length === 0 && <p className="no-data-message">暂无高危情报</p>}
+          {!highRiskLoading && !highRiskError && highRiskArticles.length > 0 && (
                 <>
                   <div className="info-cards-container">
-                    {getCurrentHighRiskArticles().map((article, index) => (
-                      <div
-                        key={article.id}
-                        className={`info-card risk-${article.riskLevel}`}
-                      >
-                        <div className="info-card-header">
-                          <span className={`risk-badge ${article.riskLevel}`}>
-                            {article.riskLevel === "high"
-                              ? "高危"
-                              : article.riskLevel === "medium"
-                              ? "中危"
-                              : "低危"}
-                          </span>
-                          <span className="info-date">{article.date}</span>
+                {highRiskArticles.map(renderArticleCard)}
                         </div>
-                        <h3
-                          className="info-title"
-                          onClick={(e) => handleTitleClick(e, article.summary)}
-                        >
-                          {article.title}
-                        </h3>
-                        <div className="info-footer">
-                          <span>{article.author}</span>
-                          <div className="info-actions">
-                            <button
-                              className="action-button"
-                              title="下载"
-                              onClick={() =>
-                                handleDownloadClick(
-                                  article.id,
-                                  article.filename || `${article.title}.bin`,
-                                  article.points
-                                )
-                              }
-                            >
-                              <Download size={16} />
-                            </button>
-                            <button 
-                              className="action-button" 
-                              title={favoriteStatus[article.id] ? "取消收藏" : "收藏"}
-                              onClick={() => handleFavoriteClick(article)}
-                            >
-                              <Bookmark size={16} />
-                            </button>
-                            <button 
-                              className="action-button" 
-                              title="分享"
-                              onClick={() => handleShareClick(article)}
-                            >
-                              <Share2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* 高危情报分页 */}
-                  {highRiskArticles.length > highRiskItemsPerPage && (
-                    <nav className="pagination-layout">
-                      <ul>
-                        {Array.from(
-                          {
-                            length: Math.ceil(
-                              highRiskArticles.length / highRiskItemsPerPage
-                            ),
-                          },
-                          (_, i) => (
-                            <li
-                              key={i + 1}
-                              className={
-                                highRiskCurrentPage === i + 1 ? "active" : ""
-                              }
-                            >
-                              <button onClick={() => paginateHighRisk(i + 1)}>
-                                {i + 1}
-                              </button>
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    </nav>
-                  )}
+              {renderPagination(highRiskCurrentPage, highRiskTotalCount, highRiskItemsPerPage, paginateHighRisk)}
                 </>
               )}
             </div>
 
-            {/* 最近中低危情报区域 */}
+        {/* 中低危情报区域 (更新) */}
             <div className="info-section">
               <h2 className="section-title">中低危情报</h2>
-              {mediumLowRiskArticles.length === 0 ? (
-                <p className="no-data-message">暂无中低危情报</p>
-              ) : (
+          {mediumLowRiskLoading && <p className="status-message">正在加载中低危数据...</p>}
+          {mediumLowRiskError && <p className="status-message error">加载中低危失败: {mediumLowRiskError.message}</p>}
+          {!mediumLowRiskLoading && !mediumLowRiskError && mediumLowRiskArticles.length === 0 && <p className="no-data-message">暂无中低危情报</p>}
+          {!mediumLowRiskLoading && !mediumLowRiskError && mediumLowRiskArticles.length > 0 && (
                 <>
                   <div className="info-cards-container">
-                    {getCurrentMediumLowRiskArticles().map((article, index) => (
-                      <div
-                        key={article.id}
-                        className={`info-card risk-${article.riskLevel}`}
-                      >
-                        <div className="info-card-header">
-                          <span className={`risk-badge ${article.riskLevel}`}>
-                            {article.riskLevel === "high"
-                              ? "高危"
-                              : article.riskLevel === "medium"
-                              ? "中危"
-                              : "低危"}
-                          </span>
-                          <span className="info-date">{article.date}</span>
+                {mediumLowRiskArticles.map(renderArticleCard)}
                         </div>
-                        <h3
-                          className="info-title"
-                          onClick={(e) => handleTitleClick(e, article.summary)}
-                        >
-                          {article.title}
-                        </h3>
-                        <div className="info-footer">
-                          <span>{article.author}</span>
-                          <div className="info-actions">
-                            <button
-                              className="action-button"
-                              title="下载"
-                              onClick={() =>
-                                handleDownloadClick(
-                                  article.id,
-                                  article.filename || `${article.title}.bin`,
-                                  article.points
-                                )
-                              }
-                            >
-                              <Download size={16} />
-                            </button>
-                            <button 
-                              className="action-button" 
-                              title={favoriteStatus[article.id] ? "取消收藏" : "收藏"}
-                              onClick={() => handleFavoriteClick(article)}
-                            >
-                              <Bookmark size={16} />
-                            </button>
-                            <button 
-                              className="action-button" 
-                              title="分享"
-                              onClick={() => handleShareClick(article)}
-                            >
-                              <Share2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* 中低危情报分页 */}
-                  {mediumLowRiskArticles.length > mediumLowRiskItemsPerPage && (
-                    <nav className="pagination-layout">
-                      <ul>
-                        {Array.from(
-                          {
-                            length: Math.ceil(
-                              mediumLowRiskArticles.length /
-                                mediumLowRiskItemsPerPage
-                            ),
-                          },
-                          (_, i) => (
-                            <li
-                              key={i + 1}
-                              className={
-                                mediumLowRiskCurrentPage === i + 1
-                                  ? "active"
-                                  : ""
-                              }
-                            >
-                              <button
-                                onClick={() => paginateMediumLowRisk(i + 1)}
-                              >
-                                {i + 1}
-                              </button>
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    </nav>
-                  )}
+              {renderPagination(mediumLowRiskCurrentPage, mediumLowRiskTotalCount, mediumLowRiskItemsPerPage, paginateMediumLowRisk)}
                 </>
               )}
             </div>
-          </>
-        )}
 
+        {/* 文件简介 Modal (不变) */}
         <Modal
           title="文件简介"
-          visible={visibleModal}
+            visible={visibleModal} // 使用 visibleModal 状态
           onOk={() => setVisibleModal(false)}
           onCancel={() => setVisibleModal(false)}
           footer={null}
           width={600}
           centered
         >
-          <div
-            style={{ padding: "20px", maxHeight: "400px", overflowY: "auto" }}
-          >
+          <div style={{ padding: "20px", maxHeight: "400px", overflowY: "auto" }}>
             <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
               {currentSummary}
             </p>
@@ -1084,10 +889,11 @@ function ArticleListDashboardLayout({ username }) {
         </Modal>
       </div>
 
-      {/* 侧边栏区域 (已更新) */}
+      {/* 侧边栏区域 (更新风险分布图逻辑) */}
       <div className="sidebar-area">
-        {/* 个人信息模块 (已更新) */}
+        {/* 个人信息模块 (不变) */}
           <div className="sidebar-module user-info-module">
+             {/* ... (个人信息部分不变) ... */}
           <h4>
             <User size={16} /> 个人信息
           </h4>
@@ -1113,8 +919,9 @@ function ArticleListDashboardLayout({ username }) {
           </div>
         </div>
 
-          {/* 通知中心模块 */}
+          {/* 通知中心模块 (不变) */}
           <div className="sidebar-module notification-module">
+             {/* ... (通知中心部分不变) ... */}
           <h4>
             <Bell size={16} /> 通知中心
           </h4>
@@ -1139,10 +946,10 @@ function ArticleListDashboardLayout({ username }) {
           )}
         </div>
 
-        {/* 文件类型统计模块 */}
-        <div className="sidebar-module file-stats-module">
+        {/* 风险等级分布模块 (更新数据源提示) */}
+        <div className="sidebar-module file-stats-module"> {/* CSS 类名保持不变 */}
           <h4>
-            <PieChart size={16} /> 风险等级分布
+            <PieChart size={16} /> 风险等级分布 (当前页热点) {/* 标题说明数据来源 */}
           </h4>
           <div className="mini-chart-container">
             {riskStatsLoading ? (
@@ -1172,36 +979,25 @@ function ArticleListDashboardLayout({ username }) {
                         labels: {
                           boxWidth: 10,
                           padding: 5,
-                          font: {
-                            size: 10,
+                          font: { size: 10 },
                           },
                         },
-                      },
-                      tooltip: {
-                        enabled: true,
-                      },
+                      tooltip: { enabled: true },
                     },
                     responsive: true,
-                    maintainAspectRatio: true,
-                    cutout: "65%",
+                    maintainAspectRatio: true, // 保持宽高比
+                    cutout: "65%", // 甜甜圈效果
                   }}
                 />
               </div>
             )}
-            <div className="mini-chart-footer">
-              <button
-                onClick={handleViewFileStats}
-                className="view-stats-button"
-              >
-                了解更多 »
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* 在return的最后添加ShareDialog组件 */}
+      {/* 分享对话框 (不变) */}
       {shareDialogOpen && selectedArticleForShare && (
+         // ... (分享对话框不变) ...
         <ShareDialog
           username={username}
           article={selectedArticleForShare}
@@ -1213,3 +1009,5 @@ function ArticleListDashboardLayout({ username }) {
 }
 
 export default ArticleListDashboardLayout;
+
+

@@ -19,7 +19,8 @@ func main() {
 	// 创建一个默认的 Gin 引擎
 	r := gin.Default()
 	// 使用你的实际数据库连接字符串
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("数据库连接失败: %v", err)
@@ -45,7 +46,7 @@ func main() {
 	}()
 	// **关键修改：将 CORS 中间件放在所有路由定义之前**
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // 允许你的前端域名
+		AllowOrigins:     []string{"http://8.148.71.83:3000","http://localhost:3000"}, // 允许你的前端域名
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"*"},
 		AllowCredentials: true,
@@ -57,6 +58,9 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
+	})
+	r.GET("/hello", func(c *gin.Context) {
+		c.String(http.StatusOK, "hello")
 	})
 	sseBroker = template.NewBroker()
 	// 定义 /register 路由和处理函数 (使用 Gin 的方式)

@@ -16,6 +16,13 @@
   margin: 0;
 }
 
+.search-result-actions {
+  display: flex;
+  justify-content: flex-end; /* Aligns buttons to the right */
+  margin-top: auto; /* Pushes actions to the bottom if needed */
+  gap: 10px; /* Adds 10px space between buttons */
+}
+
 .loading-message, 
 .error-message, 
 .no-results-message {

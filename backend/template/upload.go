@@ -29,20 +29,26 @@ type FileMetadata struct {
 // Ganache配置
 const (
 	//CBC
-	cbcGanacheURL      = "http://localhost:7545"                                            // Ganache默认RPC地址
-	cbcPrivateKey      = "c8f1739afbad21898b0481ffd4ef13cc959f5d8fd1aa944e694bbac0f9ce4da5" // 替换为你的Ganache账户私钥
-	cbcContractAddress = "0x8E224fc83924b7e8fDe212b05Cc2690225C7722D"                       // 替换为你的智能合约地址
-
+	//cbcGanacheURL      = "http://localhost:7545"                                            // Ganache默认RPC地址
+	cbcGanacheURL      = "http://127.0.0.1:7545"                                            // Ganache默认RPC地址
+	//cbcPrivateKey      = "c8f1739afbad21898b0481ffd4ef13cc959f5d8fd1aa944e694bbac0f9ce4da5" // 替换为你的Ganache账户私钥
+	cbcPrivateKey      = "53be40dc2a5eb45e93d4bb920904a676fbfcecf109146ea49ad7acb3408ea70b"
+	//cbcContractAddress = "0x8E224fc83924b7e8fDe212b05Cc2690225C7722D"                       // 替换为你的智能合约地址
+	cbcContractAddress = "0x725c1A196526a636a7de28fac5817a53750dd4D3"
 	//SBC
-	sbcGanacheURL      = "http://localhost:7547" // 假设SBC使用不同端口
-	sbcPrivateKey      = "bef04f3f3b4987e8354e5ebbe7461e0216d35d464cb46420d7c49825065397f3"
-	sbcContractAddress = "0x6906CF457d423D73209446b7A7D60BfeB37F9aC5"
-
+	//sbcGanacheURL      = "http://localhost:7547" // 假设SBC使用不同端口
+	sbcGanacheURL      = "http://127.0.0.1:7547" // 假设SBC使用不同端口
+	//sbcPrivateKey      = "bef04f3f3b4987e8354e5ebbe7461e0216d35d464cb46420d7c49825065397f3"
+	sbcPrivateKey      = "0096571430463d9416d74294ccf25f0eae3849b39f52ef325be6d373843ad75e"
+	//sbcContractAddress = "0x6906CF457d423D73209446b7A7D60BfeB37F9aC5"
+	sbcContractAddress = "0xE11383B23556482f8E630fe9127aeB197A4A3eDe"
 	//IBC
-	ibcGanacheURL      = "http://localhost:7546" // 假设IBC使用不同端口
-	ibcPrivateKey      = "7acc49c100e782cd7f2ed18174cb131d94d42182a6d5751c85710520b8899931"
-	ibcContractAddress = "0x61E7E7Ca5a4a2d8Cc801747d46FD57EB3d647d85"
-
+	//ibcGanacheURL      = "http://localhost:7546" // 假设IBC使用不同端口
+	ibcGanacheURL      = "http://127.0.0.1:7546" // 假设IBC使用不同端口
+	//ibcPrivateKey      = "7acc49c100e782cd7f2ed18174cb131d94d42182a6d5751c85710520b8899931"
+	ibcPrivateKey      = "9dd98ef44a061116fb8493faca547481169553d65ba56a4ea0f13e2d325cb986"
+	//ibcContractAddress = "0x61E7E7Ca5a4a2d8Cc801747d46FD57EB3d647d85"
+	ibcContractAddress = "0xd6094c4F43f3d2B9142930be61603435056c594c"
 	defaultChainID = 1337
 )
 
@@ -108,7 +114,8 @@ func UploadFile(c *gin.Context) {
 	}
 
 	//连接数据库
-	dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	//dsn := "root:123456@tcp(127.0.0.1:3307)/golan"
+	dsn := "block:bsPCcLmcwdcWGcWX@tcp(8.148.71.83:3306)/blockchain"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库连接失败"})

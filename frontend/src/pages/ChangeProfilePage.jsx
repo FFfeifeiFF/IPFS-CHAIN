@@ -38,9 +38,9 @@ function ChangeProfilePage() {
       setError(null); // 清除之前的错误 
 
       try {
-        console.log('Making request to:', `http://localhost:8080/changeprofile?username=${encodeURIComponent(username)}`);
+        console.log('Making request to:', `${process.env.REACT_APP_API_URL}/changeprofile?username=${encodeURIComponent(username)}`);
         // 假设获取用户信息的接口是 GET /user/profile
-        const response = await fetch(`http://localhost:8080/changeprofile?username=${encodeURIComponent(username)}`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/changeprofile?username=${encodeURIComponent(username)}`, {
           method: 'GET',
         });
         const data = await response.json();
@@ -139,9 +139,8 @@ function ChangeProfilePage() {
     }
 
     try {
-        // 注意：这里的 URL 是你原来代码中的 /changeprofile
-        // 确认后端更新接口是否就是这个路径，通常建议使用 /user/profile/update 或类似RESTful路径
-        const response = await fetch(`http://localhost:8080/changeprofile?username=${encodeURIComponent(username)}`, {
+        // 使用 PUT 请求，发送更新数据
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/changeprofile?username=${encodeURIComponent(username)}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
