@@ -21,7 +21,7 @@ function Head(props) {
       // 从当前的 location.state 中获取 username，如果不存在则不传递
       const currentUsername = location.state?.username || props.username; // 优先使用 state，其次使用 props
 
-      navigate(`/search2?q=${searchQuery}${currentUsername ? `&username=${currentUsername}` : ''}`);
+      navigate(`/search2?q=${encodeURIComponent(searchQuery)}${currentUsername ? `&username=${encodeURIComponent(currentUsername)}` : ''}`);
     }
   };
 
@@ -81,7 +81,8 @@ function Head(props) {
       <div className="header-left">
         <div className="logo" onClick={handleLogoClick}>威胁情报共享平台</div>
         <div className="navigation">
-          <a href="/depart_list">首页</a>
+          <Link to="/home" state={{username:props.username}}>首页</Link>
+          <Link to="/depart_list" state={{username:props.username}}>情报列表</Link>
           <Link to={"/fileupload"} state={{username:props.username}}>
           上传
             </Link>

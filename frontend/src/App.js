@@ -11,6 +11,7 @@ import FileManager from "./pages/myfile";
 import ChangeProfilePage from "./pages/ChangeProfilePage";
 import FileStats from "./components/FileStats";
 import MyFavorites from "./pages/MyFavorites";
+import HomePage from './pages/HomePage'; // 导入新的首页组件
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/search" element={<Search/>} /> {}
           <Route path="/search2" element={<Search2/>} /> {}
           <Route path="/depart_list" element={<Departlist/>} /> {}
+          <Route path="/home" element={<HomePage/>} /> {}
           <Route path="/fileupload" element={<Fileupload/>} /> {}
           <Route path="/myfile" element={<FileManager/>} />{}
           <Route path="/changeprofile" element={<ChangeProfilePage/>}/>{}

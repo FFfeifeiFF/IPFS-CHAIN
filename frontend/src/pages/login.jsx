@@ -36,7 +36,7 @@ function Login() {
 
       if (response.ok) {
         setSuccess(data.message || '登录成功！'); // 使用后端返回的消息，或者默认消息
-        navigate('/depart_list', { state: { username: username } });
+        navigate('/home', { state: { username: username } });
       } else {
         setError(data.error || '登录失败，请重试'); // 使用后端返回的错误信息，或者默认错误信息
       }
