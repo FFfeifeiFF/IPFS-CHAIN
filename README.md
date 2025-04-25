@@ -248,6 +248,7 @@
 ## 许可证
 
 [适用的许可证类型] 
+<<<<<<< HEAD
 
 ## 项目工作量估算
 
@@ -266,3 +267,5 @@
 
  username: og8n9yaf
  password: 00ab8f6c
+=======
+>>>>>>> e6be694cca78a101d5f40cb5b33e4c0bf97faef9
