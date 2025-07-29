@@ -93,7 +93,6 @@ func RegisterHandler(c *gin.Context) {
 	// 假设注册成功
 	c.JSON(http.StatusOK, RegisterResponse{Success: true, Message: "注册成功"})
 }
-
 func hashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -101,3 +100,4 @@ func hashPassword(password string) (string, error) {
 	}
 	return string(hashedPassword), nil
 }
+
